@@ -84,8 +84,16 @@ build_libharu :: () -> bool {
 
 	absolute_install_dir := get_absolute_path(install_dir);
 	assert(absolute_install_dir != "");
+
     absolute_build_dir := join(absolute_install_dir, "_build");
     log("Configuring libharu... \"%\" -> \"%\"", absolute_build_dir, absolute_install_dir);
+	if file_exists(absolute_build_dir) {
+		success := delete_directory(absolute_build_dir);
+		if !success {
+			log_error("Could not delete old build directory");
+			return false;
+		}
+	}
     success = make_directory_if_it_does_not_exist(absolute_build_dir);
     if !success {
         log_error("Could not create directory \"%\"\n", absolute_build_dir);
@@ -97,6 +105,7 @@ build_libharu :: () -> bool {
     array_add(*config_command,
 		"cmake",
 		absolute_libharu_path,
+		// "-DBUILD_SHARED_LIBS=OFF",
         tprint("-DCMAKE_INSTALL_PREFIX=%", absolute_install_dir),
         tprint("-DCMAKE_PREFIX_PATH=%",    install_dir),
 	);
@@ -112,7 +121,6 @@ build_libharu :: () -> bool {
         using options := get_build_options();
         array_add(*config_command, tprint("-DCMAKE_OSX_DEPLOYMENT_TARGET=%.%", minimum_macos_version.major, minimum_macos_version.minor));
     }
-
     run_or_exit(..config_command, working_directory = absolute_build_dir);
     log("Done configuring libharu");
 
@@ -187,13 +195,16 @@ libharu_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaratio
 #import "Bindings_Generator";
 #import "Compiler";
 #import "File";
+#import "File_Utilities";
 #import "String";
 #import "Process";
 
 FOOTER_UNIX :: #string END
 
-#if OS == .MACOS    libharu :: #library "macos/lib/libhpdf";
-#if OS == .LINUX    libharu :: #library "linux/lib/libhpdf";
+#if OS == .MACOS    libhpdf :: #library,no_dll "macos/lib/libhpdf";
+#if OS == .LINUX    libhpdf :: #library,no_dll "linux/lib/libhpdf";
+
+zlib :: #system_library "z"; // Needed by libhpdf
 
 END
 

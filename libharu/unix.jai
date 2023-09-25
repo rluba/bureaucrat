@@ -4239,3 +4239,5 @@ LoadIccProfileFromFile :: (pdf: Doc, icc_file_name: *u8, numcomponent: s32) -> O
 #if OS == .MACOS    libhpdf :: #library,no_dll "macos/lib/libhpdf";
 #if OS == .LINUX    libhpdf :: #library,no_dll "linux/lib/libhpdf";
 
+zlib :: #system_library "z"; // Needed by libhpdf
+
