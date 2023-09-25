@@ -1,0 +1,4 @@
+.build/
+libharu/libharu-*/
+libharu/*_build/
+libharu/*/share/
