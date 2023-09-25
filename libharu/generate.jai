@@ -54,7 +54,6 @@ generate_bindings :: () -> bool {
         array_add(*libnames,      "libhpdf");
         array_add(*include_paths, libharu_include_path);
         array_add(*source_files,  tprint("%/hpdf.h", libharu_include_path));
-        // array_add(*flatten_namespaces, "ImGui");
         array_add(*strip_prefixes, "HPDF");
         // auto_detect_enum_prefixes = false;
         log_stripped_declarations = true;
@@ -149,164 +148,40 @@ run_or_exit :: (command: .. string, working_directory := "") -> string {
 }
 
 
-//imgui_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_Visit_Result {
-//    // ImGui has "typedef ints" for each enum. but we want to just use the enums directly,
-//    // so we get nice type safety, and .unary dots, etc.
-//    //
-//    // Look for declarations inside functions (i.e., arguments) or structs (i.e., fields)
-//    get_associated_enum_name :: (name: string) -> string {
-//        if name.count > 1 && name[name.count - 1] != #char "_" {
-//            return tprint("%_", name);
-//        }
-//        return name;
-//    }
+libharu_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_Visit_Result {
+    if !parent_decl {
+        if array_find(DECLARATIONS_TO_OMIT, decl.name) {
+            decl.decl_flags |= .OMIT_FROM_OUTPUT;
+            return .STOP;
+        }
 
-//    if !parent_decl {
-//        if array_find(DECLARATIONS_TO_OMIT, decl.name) {
-//            decl.decl_flags |= .OMIT_FROM_OUTPUT;
-//            return .STOP;
-//        }
-//        if decl.name == "ImGuiContext" {
-//            decl.output_name = decl.name; // Don’t shorten ImGuiContext to Context as this would conflict
-//        }
+		if (begins_with(decl.name, "HPDF_COUNTRY_") || begins_with(decl.name, "HPDF_LANG_")) {
+			decl.decl_flags |= .OMIT_FROM_OUTPUT;
+			return .STOP;
+		}
 
-//        if decl.kind == .TYPEDEF {
-//            old_name := decl.name;
-//            if old_name {
-//                new_name := get_associated_enum_name(old_name);
-//                for context.generator.global_scope.members {
-//                    if it.kind != .ENUM  || it.name != new_name     continue;
+        if decl.kind == .TYPEDEF {
+			inner_name := tprint("_%", decl.name);
+			for context.generator.global_scope.members {
+				if it.name != inner_name     continue;
 
-//                    en := cast(*Enum)it;
+				// Don't output the typedef
+				decl.decl_flags |= .OMIT_FROM_OUTPUT;
 
-//                    // Don't output the integer typedef
-//                    decl.decl_flags |= .OMIT_FROM_OUTPUT;
+				// Keep the comment, if there is one:
+				if decl.comment.text && !it.comment.text {
+					it.comment = decl.comment;
+				}
 
-//                    // Make sure the enums like "FocusFlags_" get outputted as "FocusFlags"
-//                    if en.output_name.count > 2 && en.output_name[en.output_name.count - 1] == #char "_" {
-//                        en.output_name.count -= 1;
-//                    }
+				it.output_name = decl.output_name;
+				break;
+			}
+        }
 
-//                    // Keep the comment, if there is one:
-//                    if decl.comment.text && !en.comment.text {
-//                        en.comment = decl.comment;
-//                    }
+    }
 
-//                    table_add(*enums_for_typedefs, old_name, en);
-//                    break;
-//                }
-//            }
-//        }
-//    }
-
-//    // Look for function arguments with "typedef" types.
-//    if parent_decl &&
-//        (parent_decl.kind == .FUNCTION || parent_decl.kind == .STRUCT) &&
-//        decl.kind == .DECLARATION && decl.type.type_of_typedef != null
-//    {
-//        old_name := decl.type.type_of_typedef.name;
-//        if old_name {
-//            en, found := table_find(*enums_for_typedefs, old_name);
-//            if found {
-//                // swap in the enum for the typedef
-//                decl.type.type_of_typedef = null;
-//                decl.type.type_of_enum = en;
-
-//                // we'll also need to output a cast, like "cast(EnumType)5" for the default argument
-//                decl.decl_flags |= .NEEDS_DEFAULT_ARGUMENT_CAST;
-//            }
-//        }
-//    }
-
-//    if decl.kind == .ENUM {
-//        // ImGui has lots of enums that should be enum flags. Luckily, they all end in "…Flags_".
-//        if ends_with(decl.name, "Flags_") {
-//            en := cast(*Enum)decl;
-//            en.flags |= .IS_ENUM_FLAGS;
-//            en.flags |= .VALUES_IN_HEX;
-//        }
-//    }
-
-//    if decl.kind == .FUNCTION {
-//        func := cast(*Function)decl;
-//        type := func.type.type_of_function;
-//        // ImGui also has functions with pairs of arguments like "text_begin" and "text_end"
-//        // for the pointers to the beginning and end of a string. We'll generate wrappers for
-//        // those function which take a jai string.
-//        //
-//        // Here we collect pointers to "_begin" arguments, and use them in
-//        // get_func_args_for_printing below.
-//        for type.arguments {
-//            if it_index == 0 || !ends_with(it.name, "_end")     continue;
-//            arg_type := find_underlying_type(it.type);
-//            if !arg_type.pointer_to || !(arg_type.pointer_to.number_flags & ._8BIT) continue; // Only convert *u8 ranges to string
-
-//            name_part := slice(it.name, 0, it.name.count - "_end".count);
-//            if !name_part   continue;
-
-//            // the first arg may appear as "text_begin" or just "text"
-//            name_part_with_begin := tprint("%_begin", name_part);
-//            prev_arg := type.arguments[it_index - 1];
-//            if prev_arg.name == name_part || prev_arg.name == name_part_with_begin {
-//                array_add(*begin_end_string_args, prev_arg);
-//                func.decl_flags |= .NEEDS_ARGUMENT_WRAPPER;
-//            }
-//        }
-//    }
-
-//    return .RECURSE;
-//}
-
-//// Modify function with _begin and _end string arguments as they get printed.
-//// See the note above about "text_begin".
-//imgui_get_function_arg_for_printing :: (func: *Function, type: *Function_Type, mode: Arg_Print_Mode) -> []*Declaration {
-//    args: [..]*Declaration;
-//    for type.arguments {
-//        if array_find(begin_end_string_args, it) {
-//            if mode == {
-//                case .OUTER_WRAPPER;
-//                    // For the outer wrapper, remove any "_begin" part of the argument, and
-//                    // change its type to a jai string
-//                    arg_copy := New(Declaration);
-//                    (<<arg_copy) = <<it;
-//                    arg_copy.type = context.generator.type_def_jai_string;
-//                    if ends_with(it.name, "_begin") {
-//                        arg_copy.output_name = slice(it.name, 0, it.name.count - "_begin".count);
-//                    }
-//                    array_add(*args, arg_copy);
-
-//                    it_index += 1; // skip the next argument-we collpase the _begin and _end args into one string arg
-
-//                    continue;
-//                case .INNER_WRAPPER_CALL;
-//                    // For the inner wrapper function call, we pass the incoming arg
-//                    // as two arguments: "jai_string.data, jai_string.data + jai_string.count" -- corresponding
-//                    // to the _begin and _end parts.
-//                    base_arg_name := it.name;
-//                    if ends_with(it.name, "_begin") {
-//                        base_arg_name = slice(it.name, 0, it.name.count - "_begin".count);
-//                    }
-
-//                    arg_copy := New(Declaration);
-//                    (<<arg_copy) = <<it;
-//                    arg_copy.output_name = tprint("%.data", base_arg_name);
-//                    array_add(*args, arg_copy);
-
-//                    arg_copy_2 := New(Declaration);
-//                    (<<arg_copy_2) = <<it;
-//                    arg_copy_2.output_name = tprint("%.data + %.count", base_arg_name, base_arg_name);
-//                    array_add(*args, arg_copy_2);
-
-//                    it_index += 1; // skip the next arg, since we already added a second one above
-//                    continue;
-//            }
-//        }
-
-//        array_add(*args, it);
-//    }
-
-//    return args;
-//}
+    return .RECURSE;
+}
 
 #import "Basic";
 #import "Bindings_Generator";
@@ -317,8 +192,8 @@ run_or_exit :: (command: .. string, working_directory := "") -> string {
 
 FOOTER_UNIX :: #string END
 
-#if OS == .MACOS    imgui :: #library "macos/lib/libhpdf";
-#if OS == .LINUX    imgui :: #library "linux/lib/libhpdf";
+#if OS == .MACOS    libharu :: #library "macos/lib/libhpdf";
+#if OS == .LINUX    libharu :: #library "linux/lib/libhpdf";
 
 END
 
