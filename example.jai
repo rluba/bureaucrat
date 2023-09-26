@@ -1,3 +1,8 @@
+// @ToDo:
+// * Proper cell computation
+// * Use a TTF
+// * Footer stuff
+
 main :: () {
     output_filename := "example.pdf";
     // Customer settings
@@ -60,17 +65,16 @@ main :: () {
     add_text(*pdf, "\n");
     set_text_alignment(*pdf, .RIGHT);
     add_text(*pdf, tprint("Date: %\nDue on: %\nInvoice #: %\n", "25.09.2023", "25.09.2023", "MW2018/1706"));
-
     set_text_alignment(*pdf, .LEFT);
-    begin_table(*pdf);
+
+    begin_table(*pdf, -1, 15, 20);
+    set_default_cell_alignments(*pdf, .LEFT, .RIGHT, .RIGHT);
     set_font(*pdf, table_header_font, text_font_size);
     set_row_border(*pdf, 0);
     set_row_border(*pdf, 2, light_border_color, .BOTTOM);
-    add_header_row(*pdf,
-        .{text = "Description"},
-        .{text = "VAT",    width = 15, alignment = .RIGHT},
-        .{text = "Amount", width = 20, alignment = .RIGHT},
-    );
+    add_cell(*pdf, "Description");
+    add_cell(*pdf, "VAT");
+    add_cell(*pdf, "Amount");
 
     // Body
     set_font(*pdf, text_font, text_font_size);
@@ -91,16 +95,19 @@ main :: () {
 
     // Footer:
     set_row_border(*pdf, 1, .{0, 0, 0}, .TOP);
-    add_cell(*pdf, .{colspan = 2, alignment = .RIGHT, text = "Subtotal excluding VAT"});
+    set_text_alignment(*pdf, .RIGHT);
+    add_cell(*pdf, .{colspan = 2, text = "Subtotal excluding VAT"});
     add_cell(*pdf, "€ 1.935,00");
     set_row_border(*pdf, 0, direction = .TOP);
 
-    add_cell(*pdf, .{colspan = 2, alignment = .RIGHT, text = tprint("+ VAT % %%", vat_percent)});
+    set_text_alignment(*pdf, .RIGHT);
+    add_cell(*pdf, .{colspan = 2, text = tprint("+ VAT % %%", vat_percent)});
     set_cell_border(*pdf, 1, .{0, 0, 0}, .BOTTOM);
     add_cell(*pdf, "€ 387,00");
 
     set_font(*pdf, bold_text_font, text_font_size);
-    add_cell(*pdf, .{colspan = 2, alignment = .RIGHT, text = "Total"});
+    set_text_alignment(*pdf, .RIGHT);
+    add_cell(*pdf, .{colspan = 2, text = "Total"});
     add_cell(*pdf, "€ 2.322,00");
 
     end_table(*pdf);

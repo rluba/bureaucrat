@@ -24,33 +24,42 @@ Document :: struct {
 }
 
 Table :: struct {
-    columns:     [..] Column;
+    columns:         [..] Column;
 
-    last_row:    [..] Cell_State;
-    current_row: [..] Cell_State;
+    header:          [..] Cell_State;
+
+    last_row:        [..] Cell_State;
+    current_row:     [..] Cell_State;
+
+    next_cell_state: Cell_State;
 
     cell_index: int;
 
     Column :: struct {
-        using default: Cell;
+        using default: Cell_Style;
         width: float;
     }
 
-    Cell :: struct {
+    Cell_Content :: struct {
         text: string;
-        alignment: Pdf.TextAlignment;
         colspan: int;
     }
 
-    Cell_State :: struct {
-        using cell: Cell;
+    Cell_Style :: struct {
+        alignment: Pdf.TextAlignment;
 
         borders: [4] Border;
         padding: [4] float;
+    }
+
+    Cell_State :: struct {
+        content: Cell_Content;
+        style: Cell_Style;
 
         font: Pdf.Font;
         font_size: float;
 
+        skipped: bool;
         height: float;
     }
 
@@ -145,15 +154,12 @@ get_net_page_height :: (using document: *Document, page: Pdf.Page) -> float {
 set_font :: (document: *Document, font: Pdf.Font, size: float) {
     document.font = font;
     document.font_size = size;
-
-    page := get_current_page(document);
-    Pdf.Page_SetFontAndSize(page, font, size);
-    Pdf.Page_SetTextLeading(page, size * document.line_height_factor);
 }
 
 compute_text_size :: (using document: *Document, text: string, max_width: float = -1) -> Vector2, success: bool {
     c_text := temp_c_string(text); // @Speed
     page := get_current_page(document);
+    Pdf.Page_SetFontAndSize(page, font, font_size);
 
     width := max_width;
     if (width < 0) {
@@ -235,12 +241,23 @@ get_line_height :: (using document: *Document) -> float {
 
 add_text :: (using document: *Document, text: string, max_width: float = -1) -> bool {
     // @Incomplete @ToDo: Check if a table is active!
+    return render_text(document, text, font, font_size, alignment, max_width);
+}
 
+render_text :: (using document: *Document, text: string, text_font: Pdf.Font, text_font_size: float, text_alignment: Pdf.TextAlignment, max_width: float = -1) -> bool {
+    log("render_text: \"%\" % %", text, text_font, text_font_size);
+    // @Incomplete @ToDo: Check if a table is active!
     c_text := temp_c_string(text); // @Speed
 
     page := get_current_page(document);
     Pdf.Page_BeginText(page);
+            check_for_error(haru_doc);
+    Pdf.Page_SetFontAndSize(page, text_font, text_font_size);
+            check_for_error(haru_doc);
+    Pdf.Page_SetTextLeading(page, text_font_size * line_height_factor);
+            check_for_error(haru_doc);
     Pdf.Page_MoveTextPos(page, position.x, position.y);
+            check_for_error(haru_doc);
 
     width := max_width;
     if (width < 0) {
@@ -250,14 +267,18 @@ add_text :: (using document: *Document, text: string, max_width: float = -1) -> 
     line_height := get_line_height(document);
 
     offset := 0;
+    success := true;
     while offset < text.count {
         if position.y < page_margins[2] {
             Pdf.Page_EndText(page);
+            check_for_error(haru_doc);
             add_page(document);
             page = get_current_page(document);
             position.y -= line_height;
             Pdf.Page_BeginText(page);
+            check_for_error(haru_doc);
             Pdf.Page_MoveTextPos(page, position.x, position.y);
+            check_for_error(haru_doc);
         }
 
         wanted_end_offset := text.count;
@@ -267,49 +288,63 @@ add_text :: (using document: *Document, text: string, max_width: float = -1) -> 
             wanted_end_offset = line_end_offset;
         }
 
-        line_contains_charactes := (line_end_offset < 0 || line_end_offset != offset);
+        line_contains_characters := (line_end_offset < 0 || line_end_offset != offset);
         line_width: float;
-        if line_contains_charactes {
+        if line_contains_characters {
             remaining_width := width - (position.x - page_margins[3]);
             line_characters := Pdf.Page_MeasureText(page, c_text + offset, remaining_width, xx word_wrap, *line_width);
+            check_for_error(haru_doc);
             if line_characters == 0 {
-                if word_wrap {
-                    line_characters = Pdf.Page_MeasureText(page, c_text + offset, remaining_width, 0, *line_width);
+                if position.x == page_margins[3] {
+                    // We’re alredy at the start of the row, so breaking into the next line won't help
+                    if word_wrap {
+                        line_characters = Pdf.Page_MeasureText(page, c_text + offset, remaining_width, 0, *line_width);
+                check_for_error(haru_doc);
+                    }
+                    if line_characters == 0 {
+                        log("Uh oh");
+                        Debug.breakpoint();
+                        success = false;
+                        break;
+                    }
                 }
-                if line_characters == 0 {
-                    return false;
+            }
+
+            if line_characters {
+                if offset + line_characters != wanted_end_offset {
+                    c_text[offset + line_characters] = 0;
                 }
+
+                if text_alignment == {
+                    case .LEFT;
+                    case .RIGHT;
+                        delta := remaining_width - line_width;
+                        Pdf.Page_MoveTextPos(page, delta, 0);
+                check_for_error(haru_doc);
+                        position.x += delta;
+                    case .CENTER;
+                        delta := (remaining_width - line_width) / 2;
+                        Pdf.Page_MoveTextPos(page, delta, 0);
+                check_for_error(haru_doc);
+                        position.x += delta;
+                    case;
+                        assert(false, "@Incomplete: alignment mode % is not yet supported", text_alignment);
+                }
+
+
+                Pdf.Page_ShowText(page, c_text + offset);
+                check_for_error(haru_doc);
+
+                if offset + line_characters != wanted_end_offset {
+                    c_text[offset + line_characters] = text[offset + line_characters];
+                }
+                offset += line_characters;
             }
-
-            if offset + line_characters != wanted_end_offset {
-                c_text[offset + line_characters] = 0;
-            }
-
-            if alignment == {
-                case .LEFT;
-                case .RIGHT;
-                    delta := remaining_width - line_width;
-                    Pdf.Page_MoveTextPos(page, delta, 0);
-                    position.x += delta;
-                case .CENTER;
-                    delta := (remaining_width - line_width) / 2;
-                    Pdf.Page_MoveTextPos(page, delta, 0);
-                    position.x += delta;
-                case;
-                    assert(false, "@Incomplete: alignment mode % is not yet supported", alignment);
-            }
-
-
-            Pdf.Page_ShowText(page, c_text + offset);
-
-            if offset + line_characters != wanted_end_offset {
-                c_text[offset + line_characters] = text[offset + line_characters];
-            }
-            offset += line_characters;
         }
 
         if offset != text.count {
             Pdf.Page_MoveTextPos(page, -position.x + page_margins[3], -line_height);
+            check_for_error(haru_doc);
             position.y -= line_height;
             position.x = page_margins[3];
         } else {
@@ -322,8 +357,9 @@ add_text :: (using document: *Document, text: string, max_width: float = -1) -> 
     }
 
     Pdf.Page_EndText(page);
+	check_for_error(haru_doc);
 
-    return true;
+    return success;
 }
 
 //html_content as generated by Trix
@@ -347,9 +383,24 @@ end_footer :: (using document: *Document) {
     // @Incomplete
 }
 
-begin_table :: (using document: *Document) {
+begin_table :: (using document: *Document, column_widths: .. float) {
     table = New(Table);
-    // @Incomplete
+    array_resize(*table.columns, column_widths.count);
+
+    // Copy the current document state as default for each cell
+    for * table.columns {
+        it.alignment = document.alignment;
+    }
+}
+
+set_default_cell_alignments :: (using document: *Document, alignments: .. Pdf.TextAlignment) {
+    assert(table != null);
+    assert(alignments.count == table.columns.count);
+    for alignments {
+        table.columns[it_index].alignment = it;
+    }
+
+    document.alignment = table.columns[table.current_row.count].alignment;
 }
 
 set_row_border :: (using document: *Document, size: float, color := Vector3.{0,0,0}, direction := Border_Direction.ALL) {
@@ -362,28 +413,76 @@ set_cell_border :: (using document: *Document, size: float, color := Vector3.{0,
     // @Incomplete
 }
 
-add_header_row :: (using document: *Document, columns: .. Table.Column) {
-    assert(table != null);
-    // @Incomplete
-}
-
 add_table_row :: (using document: *Document, texts: .. string) {
     assert(table != null);
-    // assert(texts.count == table.columns.count);
-    // @Incomplete
+    assert(texts.count == table.columns.count);
+    for texts add_cell(document, it);
 }
 
 add_cell :: (using document: *Document, text: string) {
-    // @Incomplete
+    add_cell(document, .{text = text});
 }
 
-add_cell :: (using document: *Document, data: Table.Cell) {
-    // @Incomplete
+add_cell :: (using document: *Document, data: Table.Cell_Content) {
+    assert(table != null);
+    assert(table.columns.count != 0);
+
+    state := table.next_cell_state;
+    state.style.alignment = alignment;
+    state.font = font;
+    state.font_size = font_size;
+    state.content = data;
+
+    array_add(*table.current_row, state);
+    for 1..data.colspan-1 {
+        array_add(*table.current_row, .{skipped = true});
+    }
+
+    if table.current_row.count == table.columns.count {
+        compute_height(document, table.current_row);
+        if table.last_row {
+            merge_borders(table.last_row, table.current_row);
+            render_row(document, table.last_row);
+        }
+        table.last_row = table.current_row;
+
+        empty: [..] Table.Cell_State;
+        table.current_row = empty;
+    }
+
+    document.alignment = table.columns[table.current_row.count].alignment;
+
+    table.next_cell_state = .{style = table.columns[table.current_row.count].default};
 }
 
 end_table :: (using document: *Document) {
+    assert(!table.current_row.count);
+    if table.last_row {
+        render_row(document, table.last_row);
+        table.last_row.count = 0;
+    }
+    // free(table);
+}
+
+render_row :: (using document: *Document, row: [] Table.Cell_State) {
+    for col: row {
+        // @ToDo: Column width!
+        // @ToDo: borders!
+        // @ToDo: padding!
+        // @ToDo: Colspan!
+        if col.skipped continue;
+        render_text(document, col.content.text, col.font, col.font_size, col.style.alignment);
+        add_text(document, " ");
+    }
+    add_text(document, "\n");
+}
+
+compute_height :: (using document: *Document, row: [] Table.Cell_State) {
     // @Incomplete
-    free(table);
+}
+
+merge_borders :: (upper: [] Table.Cell_State, lower: [] Table.Cell_State) {
+    // @Incomplete
 }
 
 
@@ -423,3 +522,4 @@ check_for_error :: (pdf: Pdf.Doc, loc := #caller_location) {
 #import "Basic";
 #import "Math";
 #import "String";
+Debug :: #import "Debug";
