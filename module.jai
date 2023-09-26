@@ -75,6 +75,8 @@ init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.Pa
 
     Pdf.UseUTFEncodings(pdf);
 
+    document.haru_doc = pdf;
+
     document.page_size = page_size;
     document.page_orientation = page_orientation;
 
@@ -85,7 +87,7 @@ init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.Pa
 
 deinit :: (document: *Document) {
     // @ToDo
-    defer Pdf.Free(pdf);
+    defer Pdf.Free(document.haru_doc);
 }
 
 add_page :: (using document: *Document) {
@@ -178,7 +180,7 @@ add_header_row :: (using document: *Document, columns: .. Table.Column) {
 
 add_table_row :: (using document: *Document, texts: .. string) {
     assert(table != null);
-    assert(texts.count == table.columns.count);
+    // assert(texts.count == table.columns.count);
     // @Incomplete
 }
 

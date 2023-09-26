@@ -1,4 +1,5 @@
 main :: () {
+    output_filename := "example.pdf";
     // Customer settings
     page_size := Pdf.PageSizes.A4;
 
@@ -99,6 +100,11 @@ main :: () {
         add_text(*pdf, tprint("Page % of %", i + 1, *pdf.pages.count));
         end_footer(*pdf);
     }
+
+    // Save the PDF
+    Pdf.SaveToFile(pdf.haru_doc, to_c_string(output_filename));
+	check_for_error(pdf.pdf_context);
+    log("Created %", output_filename);
 }
 
 #import,file "module.jai";
