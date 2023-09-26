@@ -14,6 +14,18 @@ main :: () {
 	Pdf.Page_SetSize(page, .A4, .LANDSCAPE);
 
 	font := Pdf.GetFont(pdf, "Helvetica", null);
+    Pdf.Page_SetFontAndSize(page, font, 14);
+
+    line_width: float;
+    line_characters := Pdf.Page_MeasureText(page, "verylongwordthatcanotbefitintothewidthwegaveyou", 10, Pdf.HPDF_TRUE, *line_width);
+    log("We could fit % characters with a real width of % (% %)", line_characters, line_width, Pdf.GetError(pdf), Pdf.GetErrorDetail(pdf));
+
+    Pdf.Page_BeginText(page);
+    Pdf.Page_SetTextLeading(page, 20);
+    Pdf.Page_TextOut(page, Pdf.Page_GetWidth(page) / 2, Pdf.Page_GetHeight(page) / 2, "Hello\nNewline!");
+    Pdf.Page_ShowText(page, "Hello again\nNewline!");
+    Pdf.Page_ShowTextNextLine(page, "Hello next line\nNewline!");
+    Pdf.Page_EndText(page);
 
     // // Define cell dimensions and padding
     // float cell_width = 200;
