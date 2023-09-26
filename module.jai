@@ -8,6 +8,8 @@ Document :: struct {
     page_size: Pdf.PageSizes;
     page_orientation: Pdf.PageDirection;
     page_margins: [4] float;
+    page_background: Vector3;
+    text_color: Vector3;
 
     header_height: float;
     footer_height: float;
@@ -80,7 +82,7 @@ Border_Direction :: enum_flags u8 {
     ALL    :: X | Y;
 }
 
-init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.PageDirection, page_margins: [4] float) -> bool {
+init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.PageDirection, page_margins: [4] float, page_background := Vector3.{1,1,1}, text_color := Vector3.{0,0,0}) -> bool {
     pdf := Pdf.New(pdf_error_handler, *document.pdf_context);
     if !pdf {
         log_error("Error: Cannot create PDF object.");
@@ -94,6 +96,8 @@ init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.Pa
     document.page_size = page_size;
     document.page_orientation = page_orientation;
     document.page_margins = page_margins;
+    document.page_background = page_background;
+    document.text_color = text_color;
 
     add_page(document);
 
@@ -118,6 +122,12 @@ add_page :: (using document: *Document) {
     height := Pdf.Page_GetHeight(page);
     position.x = page_margins[3];
     position.y = height - page_margins[0];
+
+    Pdf.Page_SetRGBFill(page, page_background.x, page_background.y, page_background.z);
+    Pdf.Page_Rectangle(page, 0, 0, Pdf.Page_GetWidth(page), height);
+    Pdf.Page_Fill(page);
+
+    Pdf.Page_SetRGBFill(page, text_color.x, text_color.y, text_color.z);
 
     // For debugging:
     Pdf.Page_Rectangle(page, page_margins[3], page_margins[2], get_net_page_width(document, page), get_net_page_height(document, page));
@@ -251,13 +261,9 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
 
     page := get_current_page(document);
     Pdf.Page_BeginText(page);
-            check_for_error(haru_doc);
     Pdf.Page_SetFontAndSize(page, text_font, text_font_size);
-            check_for_error(haru_doc);
     Pdf.Page_SetTextLeading(page, text_font_size * line_height_factor);
-            check_for_error(haru_doc);
     Pdf.Page_MoveTextPos(page, position.x, position.y);
-            check_for_error(haru_doc);
 
     width := max_width;
     if (width < 0) {
@@ -271,14 +277,11 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
     while offset < text.count {
         if position.y < page_margins[2] {
             Pdf.Page_EndText(page);
-            check_for_error(haru_doc);
             add_page(document);
             page = get_current_page(document);
             position.y -= line_height;
             Pdf.Page_BeginText(page);
-            check_for_error(haru_doc);
             Pdf.Page_MoveTextPos(page, position.x, position.y);
-            check_for_error(haru_doc);
         }
 
         wanted_end_offset := text.count;
@@ -293,13 +296,11 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
         if line_contains_characters {
             remaining_width := width - (position.x - page_margins[3]);
             line_characters := Pdf.Page_MeasureText(page, c_text + offset, remaining_width, xx word_wrap, *line_width);
-            check_for_error(haru_doc);
             if line_characters == 0 {
                 if position.x == page_margins[3] {
                     // We’re alredy at the start of the row, so breaking into the next line won't help
                     if word_wrap {
                         line_characters = Pdf.Page_MeasureText(page, c_text + offset, remaining_width, 0, *line_width);
-                check_for_error(haru_doc);
                     }
                     if line_characters == 0 {
                         log("Uh oh");
@@ -320,12 +321,10 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
                     case .RIGHT;
                         delta := remaining_width - line_width;
                         Pdf.Page_MoveTextPos(page, delta, 0);
-                check_for_error(haru_doc);
                         position.x += delta;
                     case .CENTER;
                         delta := (remaining_width - line_width) / 2;
                         Pdf.Page_MoveTextPos(page, delta, 0);
-                check_for_error(haru_doc);
                         position.x += delta;
                     case;
                         assert(false, "@Incomplete: alignment mode % is not yet supported", text_alignment);
@@ -333,7 +332,6 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
 
 
                 Pdf.Page_ShowText(page, c_text + offset);
-                check_for_error(haru_doc);
 
                 if offset + line_characters != wanted_end_offset {
                     c_text[offset + line_characters] = text[offset + line_characters];
@@ -344,7 +342,6 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
 
         if offset != text.count {
             Pdf.Page_MoveTextPos(page, -position.x + page_margins[3], -line_height);
-            check_for_error(haru_doc);
             position.y -= line_height;
             position.x = page_margins[3];
         } else {
@@ -357,7 +354,6 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
     }
 
     Pdf.Page_EndText(page);
-	check_for_error(haru_doc);
 
     return success;
 }
