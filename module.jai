@@ -574,30 +574,33 @@ render_row :: (using document: *Document, row: [] Table.Cell_State) {
         // @ToDo: borders!
         render_text(document, col.content.text, col.font, col.font_size, col.style.alignment, min_x = content_start_x, max_width = content_width);
         min_x += cell_width;
-        col.height = line_height - (position.y - text_baseline_start_y) + 2 * col.style.padding.y;
 
-        cell_end_y := row_start.y - col.height;
-        if it_index min_y = Min(min_y, cell_end_y);
-        else        min_y = cell_end_y;
+        // // For debugging:
+        // col_height := line_height - (position.y - text_baseline_start_y) + 2 * col.style.padding.y;
+        // page := get_current_page(document);
+        // if table.num_rows % 2 {
+        //     pattern := float.[2, 6];
+        //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 0);
+        //     Pdf.Page_SetRGBStroke(page, 0.8, 0, 0);
+        // } else {
+        //     pattern := float.[3, 7];
+        //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
+        //     Pdf.Page_SetRGBStroke(page, 0, 0.8, 0);
+        // }
+        // Pdf.Page_Rectangle(page, page_margins[3] + cell_start_x, row_start.y, cell_width, -col_height);
+        // Pdf.Page_Stroke(page);
+        // Pdf.Page_SetDash(page, null, 0, 0);
+        // Pdf.Page_SetRGBStroke(page, 0, 0, 0);
 
-        // For debugging:
+        // Placeholder for real borders:
         page := get_current_page(document);
-        if table.num_rows % 2 {
-            pattern := float.[2, 6];
-            Pdf.Page_SetDash(page, pattern.data, pattern.count, 0);
-            Pdf.Page_SetRGBStroke(page, 0.8, 0, 0);
-        } else {
-            pattern := float.[3, 7];
-            Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
-            Pdf.Page_SetRGBStroke(page, 0, 0.8, 0);
-        }
-        Pdf.Page_Rectangle(page, page_margins[3] + cell_start_x, row_start.y, cell_width, -col.height);
+        Pdf.Page_Rectangle(page, page_margins[3] + cell_start_x, row_start.y, col.width, -col.height);
         Pdf.Page_Stroke(page);
         Pdf.Page_SetDash(page, null, 0, 0);
         Pdf.Page_SetRGBStroke(page, 0, 0, 0);
     }
 
-    position.y = min_y;
+    position.y = row_start.y - row[0].height;
 }
 
 compute_height :: (using document: *Document, row: [] Table.Cell_State) {
