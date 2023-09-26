@@ -68,7 +68,9 @@ Table :: struct {
         font_size: float;
 
         skipped: bool;
+        width: float;
         height: float;
+        merged_borders: [4] Border; // @ToDo: Set when the cell is created an when we merge
     }
 
     Border :: struct {
@@ -173,16 +175,21 @@ set_font :: (document: *Document, font: Pdf.Font, size: float) {
 }
 
 compute_text_size :: (using document: *Document, text: string, max_width: float = -1) -> Vector2, success: bool {
+    size, success := compute_text_size(document, text, font, font_size, max_width);
+    return size, success;
+}
+
+compute_text_size :: (using document: *Document, text: string, text_font: Pdf.Font, text_font_size: float, max_width: float = -1) -> Vector2, success: bool {
     c_text := temp_c_string(text); // @Speed
     page := get_current_page(document);
-    Pdf.Page_SetFontAndSize(page, font, font_size);
+    Pdf.Page_SetFontAndSize(page, text_font, text_font_size);
 
     width := max_width;
     if (width < 0) {
         width = get_net_page_width(document, page);
     }
 
-    line_height := font_size * line_height_factor;
+    line_height := text_font_size * line_height_factor;
 
     result: Vector2;
     if text.count result.y += line_height;
@@ -484,14 +491,35 @@ add_cell :: (using document: *Document, data: Table.Cell_Content) {
     if table.current_row.count == table.columns.count {
         table.num_rows += 1;
         compute_height(document, table.current_row);
+        y_after_last_row := position.y;
+        if table.last_row  y_after_last_row -= table.last_row[0].height;
+
+        current_row_fits := (y_after_last_row - table.current_row[0].height >= page_margins[2]);
+
         if table.last_row {
-            merge_borders(table.last_row, table.current_row);
+            if current_row_fits merge_borders(table.last_row, table.current_row);
             render_row(document, table.last_row);
         }
-        table.last_row = table.current_row;
 
-        empty: [..] Table.Cell_State;
-        table.current_row = empty;
+        if !current_row_fits {
+            add_page(document);
+            if table.header {
+                merge_borders(table.header, table.current_row);
+                render_row(document, table.header);
+            }
+        }
+
+        // @Incomplete: What do we do if a row doesn’t fit on the page on its own!?
+        assert(position.y - table.current_row[0].height >= page_margins[2]);
+
+        if !table.header {
+            array_copy(*table.header, table.current_row);
+        }
+
+        old_last := table.last_row;
+        table.last_row = table.current_row;
+        table.current_row = old_last;
+        array_reset_keeping_memory(*table.current_row);
     }
 
     document.alignment = table.columns[table.current_row.count].alignment;
@@ -506,7 +534,7 @@ end_table :: (using document: *Document) {
         render_row(document, table.last_row);
         table.last_row.count = 0;
     }
-    // free(table);
+    free(table);
 }
 
 render_row :: (using document: *Document, row: [] Table.Cell_State) {
@@ -514,7 +542,6 @@ render_row :: (using document: *Document, row: [] Table.Cell_State) {
     assert(row.count == table.columns.count);
 
     net_width := get_net_page_width(document);
-    Debug.breakpoint();
 
     min_x: float;
     row_start := position;
@@ -574,7 +601,34 @@ render_row :: (using document: *Document, row: [] Table.Cell_State) {
 }
 
 compute_height :: (using document: *Document, row: [] Table.Cell_State) {
-    // @Incomplete
+    assert(table != null);
+    assert(row.count == table.columns.count);
+
+    net_width := get_net_page_width(document);
+
+    min_x: float;
+    row_start := position;
+    max_height: float;
+
+    for * col: row {
+        if col.skipped continue;
+
+        col.width = 0;
+        for i: 0..col.content.colspan-1 {
+            col.width += net_width * table.columns[it_index + i].width;
+        }
+
+        content_width := col.width - 2 * col.style.padding.x;
+        line_height := col.font_size * line_height_factor;
+
+        text_size := compute_text_size(document, col.content.text, col.font, col.font_size, content_width);
+        col_height := text_size.y + 2 * col.style.padding.y;
+        max_height = Max(max_height, col_height);
+    }
+
+    for * col: row {
+        col.height = max_height;
+    }
 }
 
 merge_borders :: (upper: [] Table.Cell_State, lower: [] Table.Cell_State) {

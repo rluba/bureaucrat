@@ -60,7 +60,6 @@ main :: () {
 
     set_font(*pdf, subtitle_font, text_font_size);
     add_text(*pdf, "To\n");
-    // set_font(*pdf, text_font, text_font_size);
     add_text(*pdf, formatted_address);
     add_text(*pdf, "\n");
     set_text_alignment(*pdf, .RIGHT);
