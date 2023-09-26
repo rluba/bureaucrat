@@ -72,16 +72,18 @@ main :: () {
     set_font(*pdf, table_header_font, text_font_size);
     set_row_border(*pdf, 0);
     set_row_border(*pdf, 2, light_border_color, .BOTTOM);
+    set_default_cell_paddings(*pdf, .{5, 10}, .{5, 10}, .{5, 10});
     add_cell(*pdf, "Description");
     add_cell(*pdf, "VAT");
     add_cell(*pdf, "Amount");
 
     // Body
+    set_default_cell_paddings(*pdf, .{5, 7}, .{5, 7}, .{5, 7});
     set_font(*pdf, text_font, text_font_size);
     set_row_border(*pdf, 0);
     set_row_border(*pdf, 1, light_border_color, .BOTTOM);
-    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,\n83");
+    add_table_row(*pdf, "i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i", "20 %", "€ 66,67");
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
     add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
