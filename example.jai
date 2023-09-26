@@ -67,7 +67,7 @@ main :: () {
     add_text(*pdf, tprint("Date: %\nDue on: %\nInvoice #: %\n", "25.09.2023", "25.09.2023", "MW2018/1706"));
     set_text_alignment(*pdf, .LEFT);
 
-    begin_table(*pdf, -1, 15, 20);
+    begin_table(*pdf, -1, 0.15, 0.20);
     set_default_cell_alignments(*pdf, .LEFT, .RIGHT, .RIGHT);
     set_font(*pdf, table_header_font, text_font_size);
     set_row_border(*pdf, 0);
@@ -80,18 +80,32 @@ main :: () {
     set_font(*pdf, text_font, text_font_size);
     set_row_border(*pdf, 0);
     set_row_border(*pdf, 1, light_border_color, .BOTTOM);
-    add_table_row(*pdf, "Pure Laser: 01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive: 16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
-    add_table_row(*pdf, "Pure Laser: 01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive: 16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
-    add_table_row(*pdf, "Pure Laser: 01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive: 16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
-    add_table_row(*pdf, "Pure Laser: 01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive: 16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
-    add_table_row(*pdf, "Pure Laser: 01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive: 16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
-    add_table_row(*pdf, "Pure Laser: 01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive: 16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
 
     // Footer:
     set_row_border(*pdf, 1, .{0, 0, 0}, .TOP);
