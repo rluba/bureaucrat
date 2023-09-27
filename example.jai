@@ -70,7 +70,7 @@ main :: () {
     set_default_cell_alignments(*pdf, .LEFT, .RIGHT, .RIGHT);
     set_font(*pdf, table_header_font, text_font_size);
     set_row_border(*pdf, 0);
-    set_row_border(*pdf, 2, light_border_color, .BOTTOM);
+    set_row_border(*pdf, 4, light_border_color, .BOTTOM);
     set_default_cell_paddings(*pdf, .{5, 10}, .{5, 10}, .{5, 10});
     add_cell(*pdf, "Description");
     add_cell(*pdf, "VAT");
@@ -80,6 +80,7 @@ main :: () {
     set_default_cell_paddings(*pdf, .{5, 7}, .{5, 7}, .{5, 7});
     set_font(*pdf, text_font, text_font_size);
     set_row_border(*pdf, 0);
+    set_row_border(*pdf, 1, .{0, 0, 0}, .TOP);
     set_row_border(*pdf, 1, light_border_color, .BOTTOM);
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,\n83");
     add_table_row(*pdf, "i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i", "20 %", "€ 66,67");
@@ -108,8 +109,9 @@ main :: () {
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
     add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
 
-    // Footer:
+    begin_table_footer(*pdf);
     set_row_border(*pdf, 1, .{0, 0, 0}, .TOP);
+    set_cell_border(*pdf, 0, .{0, 0, 0}, .BOTTOM);
     set_text_alignment(*pdf, .RIGHT);
     add_cell(*pdf, .{colspan = 2, text = "Subtotal excluding VAT"});
     add_cell(*pdf, "€ 1.935,00");
@@ -122,6 +124,7 @@ main :: () {
 
     set_font(*pdf, bold_text_font, text_font_size);
     set_text_alignment(*pdf, .RIGHT);
+    set_row_border(*pdf, 0, .{0, 0, 0}, .BOTTOM);
     add_cell(*pdf, .{colspan = 2, text = "Total"});
     add_cell(*pdf, "€ 2.322,00");
 

@@ -28,20 +28,19 @@ Document :: struct {
 }
 
 Table :: struct {
-    padding: Vector2;
+    padding:        Vector2;
 
-    columns:         [..] Column;
+    columns:        [..] Column;
 
-    header:          [..] Cell_State;
+    header:         [..] Cell_State;
 
-    last_row:        [..] Cell_State;
-    current_row:     [..] Cell_State;
+    last_row:       [..] Cell_State;
+    current_row:    [..] Cell_State;
 
-    num_rows := 0;
+    num_rows        := 0;
+    num_footer_rows := -1;
 
-    next_cell_state: Cell_State;
-
-    cell_index: int;
+    cell_index:     int;
 
     Column :: struct {
         using default: Cell_Style;
@@ -138,8 +137,15 @@ add_page :: (using document: *Document) {
     Pdf.Page_SetRGBFill(page, text_color.x, text_color.y, text_color.z);
 
     // For debugging:
-    Pdf.Page_Rectangle(page, page_margins[3], page_margins[2], get_net_page_width(document, page), get_net_page_height(document, page));
-    Pdf.Page_Stroke(page);
+    // {
+    //     pattern := float.[3, 7];
+    //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
+    //     Pdf.Page_SetRGBStroke(page, 0.4, 0.4, 0.9);
+    //     Pdf.Page_Rectangle(page, page_margins[3], page_margins[2], get_net_page_width(document, page), get_net_page_height(document, page));
+    //     Pdf.Page_Stroke(page);
+    //     Pdf.Page_SetDash(page, null, 0, 0);
+    //     Pdf.Page_SetRGBStroke(page, 0, 0, 0);
+    // }
 }
 
 get_current_page :: (using document: *Document) -> Pdf.Page {
@@ -451,12 +457,33 @@ set_default_cell_paddings :: (using document: *Document, paddings: .. Vector2) {
 
 set_row_border :: (using document: *Document, size: float, color := Vector3.{0,0,0}, direction := Border_Direction.ALL) {
     assert(table != null);
-    // @Incomplete
+    border := Table.Border.{size, color};
+    if direction & .TOP {
+        for * table.columns {
+            it.default.borders[0] = border;
+        }
+    }
+    if direction & .LEFT {
+        table.columns[table.columns.count - 1].default.borders[1] = border;
+    }
+    if direction & .BOTTOM {
+        for * table.columns {
+            it.default.borders[2] = border;
+        }
+    }
+    if direction & .RIGHT {
+        table.columns[0].default.borders[3] = border;
+    }
 }
 
 set_cell_border :: (using document: *Document, size: float, color := Vector3.{0,0,0}, direction := Border_Direction.ALL) {
     assert(table != null);
-    // @Incomplete
+    style := *table.columns[table.current_row.count].default;
+    border := Table.Border.{size, color};
+    if direction & .TOP    style.borders[0] = border;
+    if direction & .RIGHT  style.borders[1] = border;
+    if direction & .BOTTOM style.borders[2] = border;
+    if direction & .LEFT   style.borders[3] = border;
 }
 
 add_table_row :: (using document: *Document, texts: .. string) {
@@ -473,7 +500,11 @@ add_cell :: (using document: *Document, data: Table.Cell_Content) {
     assert(table != null);
     assert(table.columns.count != 0);
 
-    state := table.next_cell_state;
+
+    default := table.columns[table.current_row.count].default;
+
+    state: Table.Cell_State;
+    state.style.borders = default.borders;
     state.style.alignment = alignment;
     state.style.padding = padding;
     state.font = font;
@@ -490,23 +521,29 @@ add_cell :: (using document: *Document, data: Table.Cell_Content) {
 
     if table.current_row.count == table.columns.count {
         table.num_rows += 1;
+        if table.num_footer_rows >= 0 table.num_footer_rows += 1;
+
         compute_height(document, table.current_row);
         y_after_last_row := position.y;
         if table.last_row  y_after_last_row -= table.last_row[0].height;
 
         current_row_fits := (y_after_last_row - table.current_row[0].height >= page_margins[2]);
 
+        render_last_row_on_next_page := table.last_row && !current_row_fits && table.num_footer_rows == 1;
+
         if table.last_row {
-            if current_row_fits merge_borders(table.last_row, table.current_row);
-            render_row(document, table.last_row);
+            if current_row_fits merge_borders(*table.last_row, *table.current_row);
+            if !render_last_row_on_next_page render_row(document, table.last_row);
         }
 
         if !current_row_fits {
             add_page(document);
+            row_below_header := ifx render_last_row_on_next_page then *table.last_row else *table.current_row;
             if table.header {
-                merge_borders(table.header, table.current_row);
+                merge_borders(*table.header, row_below_header);
                 render_row(document, table.header);
             }
+            if render_last_row_on_next_page render_row(document, table.last_row);
         }
 
         // @Incomplete: What do we do if a row doesn’t fit on the page on its own!?
@@ -524,8 +561,12 @@ add_cell :: (using document: *Document, data: Table.Cell_Content) {
 
     document.alignment = table.columns[table.current_row.count].alignment;
     document.padding = table.columns[table.current_row.count].padding;
+}
 
-    table.next_cell_state = .{style = table.columns[table.current_row.count].default};
+begin_table_footer :: (using document: *Document) {
+    assert(table != null);
+    assert(table.num_footer_rows < 0);
+    table.num_footer_rows = 0;
 }
 
 end_table :: (using document: *Document) {
@@ -535,72 +576,6 @@ end_table :: (using document: *Document) {
         table.last_row.count = 0;
     }
     free(table);
-}
-
-render_row :: (using document: *Document, row: [] Table.Cell_State) {
-    assert(table != null);
-    assert(row.count == table.columns.count);
-
-    net_width := get_net_page_width(document);
-
-    min_x: float;
-    row_start := position;
-    min_y: float;
-
-    for * col: row {
-        if col.skipped continue;
-
-        cell_width: float;
-        for i: 0..col.content.colspan-1 {
-            cell_width += net_width * table.columns[it_index + i].width;
-        }
-        content_width := cell_width - 2 * col.style.padding.x;
-
-        descender_int_offset := Pdf.Font_GetDescent(col.font);
-        descender_offset := (descender_int_offset * font_size) / 1000.0;
-        ascender_int_offset := Pdf.Font_GetAscent(col.font);
-        ascender_offset := (ascender_int_offset * font_size) / 1000.0;
-
-        line_height := col.font_size * line_height_factor;
-        font_padding := line_height + descender_offset - ascender_offset;
-
-        cell_start_x := min_x;
-        content_start_x := cell_start_x + col.style.padding.x;
-        text_baseline_start_y := row_start.y - col.style.padding.y - (ascender_offset + font_padding / 2);
-
-        position.x = page_margins[3] + content_start_x;
-        position.y = text_baseline_start_y;
-
-        // @ToDo: borders!
-        render_text(document, col.content.text, col.font, col.font_size, col.style.alignment, min_x = content_start_x, max_width = content_width);
-        min_x += cell_width;
-
-        // // For debugging:
-        // col_height := line_height - (position.y - text_baseline_start_y) + 2 * col.style.padding.y;
-        // page := get_current_page(document);
-        // if table.num_rows % 2 {
-        //     pattern := float.[2, 6];
-        //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 0);
-        //     Pdf.Page_SetRGBStroke(page, 0.8, 0, 0);
-        // } else {
-        //     pattern := float.[3, 7];
-        //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
-        //     Pdf.Page_SetRGBStroke(page, 0, 0.8, 0);
-        // }
-        // Pdf.Page_Rectangle(page, page_margins[3] + cell_start_x, row_start.y, cell_width, -col_height);
-        // Pdf.Page_Stroke(page);
-        // Pdf.Page_SetDash(page, null, 0, 0);
-        // Pdf.Page_SetRGBStroke(page, 0, 0, 0);
-
-        // Placeholder for real borders:
-        page := get_current_page(document);
-        Pdf.Page_Rectangle(page, page_margins[3] + cell_start_x, row_start.y, col.width, -col.height);
-        Pdf.Page_Stroke(page);
-        Pdf.Page_SetDash(page, null, 0, 0);
-        Pdf.Page_SetRGBStroke(page, 0, 0, 0);
-    }
-
-    position.y = row_start.y - row[0].height;
 }
 
 compute_height :: (using document: *Document, row: [] Table.Cell_State) {
@@ -634,7 +609,90 @@ compute_height :: (using document: *Document, row: [] Table.Cell_State) {
     }
 }
 
-merge_borders :: (upper: [] Table.Cell_State, lower: [] Table.Cell_State) {
+
+render_row :: (using document: *Document, row: [] Table.Cell_State) {
+    assert(table != null);
+    assert(row.count == table.columns.count);
+
+    net_width := get_net_page_width(document);
+
+    min_x: float;
+    row_start := position;
+    min_y: float;
+
+    for * col: row {
+        if col.skipped continue;
+
+        content_width := col.width - 2 * col.style.padding.x;
+
+        descender_int_offset := Pdf.Font_GetDescent(col.font);
+        descender_offset := (descender_int_offset * font_size) / 1000.0;
+        ascender_int_offset := Pdf.Font_GetAscent(col.font);
+        ascender_offset := (ascender_int_offset * font_size) / 1000.0;
+
+        line_height := col.font_size * line_height_factor;
+        font_padding := line_height + descender_offset - ascender_offset;
+
+        cell_start_x := min_x;
+        content_start_x := cell_start_x + col.style.padding.x;
+        text_baseline_start_y := row_start.y - col.style.padding.y - (ascender_offset + font_padding / 2);
+
+        haru_cell_start_x := page_margins[3] + cell_start_x;
+        haru_content_start_x := page_margins[3] + content_start_x;
+
+        position.x = haru_content_start_x;
+        position.y = text_baseline_start_y;
+
+        draw_border :: (page: Pdf.Page, border: Table.Border, start_x: float, start_y: float, end_x: float, end_y: float) {
+            Pdf.Page_SetLineCap(page, .PROJECTING_SQUARE_END);
+            Pdf.Page_SetRGBStroke(page, border.color.x, border.color.y, border.color.z);
+            Pdf.Page_SetLineWidth(page, border.size);
+            Pdf.Page_MoveTo(page, start_x, start_y);
+            Pdf.Page_LineTo(page, end_x, end_y);
+            Pdf.Page_Stroke(page);
+        }
+
+        // Placeholder for real borders:
+        page := get_current_page(document);
+        borders := col.style.borders; // @ToDo: merged_borders
+        if borders[0].size > 0 {
+            draw_border(page, borders[0], haru_cell_start_x, row_start.y, haru_cell_start_x + col.width, row_start.y);
+        }
+        if borders[1].size > 0 {
+            draw_border(page, borders[1], haru_cell_start_x + col.width, row_start.y, haru_cell_start_x + col.width, row_start.y - col.height);
+        }
+        if borders[2].size > 0 {
+            draw_border(page, borders[2], haru_cell_start_x + col.width, row_start.y - col.height, haru_cell_start_x, row_start.y - col.height);
+        }
+        if borders[3].size > 0 {
+            draw_border(page, borders[3], haru_cell_start_x, row_start.y - col.height, haru_cell_start_x, row_start.y);
+        }
+
+        render_text(document, col.content.text, col.font, col.font_size, col.style.alignment, min_x = content_start_x, max_width = content_width);
+        min_x += col.width;
+
+        // // For debugging:
+        // col_height := line_height - (position.y - text_baseline_start_y) + 2 * col.style.padding.y;
+        // page := get_current_page(document);
+        // if table.num_rows % 2 {
+        //     pattern := float.[2, 6];
+        //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 0);
+        //     Pdf.Page_SetRGBStroke(page, 0.8, 0, 0);
+        // } else {
+        //     pattern := float.[3, 7];
+        //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
+        //     Pdf.Page_SetRGBStroke(page, 0, 0.8, 0);
+        // }
+        // Pdf.Page_Rectangle(page, page_margins[3] + cell_start_x, row_start.y, cell_width, -col_height);
+        // Pdf.Page_Stroke(page);
+        // Pdf.Page_SetDash(page, null, 0, 0);
+        // Pdf.Page_SetRGBStroke(page, 0, 0, 0);
+    }
+
+    position.y = row_start.y - row[0].height;
+}
+
+merge_borders :: (upper: *[] Table.Cell_State, lower: *[] Table.Cell_State) {
     // @Incomplete
 }
 
