@@ -10,11 +10,8 @@ main :: () {
 
     pdf: Document;
     // success := init(*pdf, page_size, .PORTRAIT, .[300, 40, 355, 30]);
-    success := init(*pdf, page_size, .PORTRAIT, .[20, 40, 15, 30]);
+    success := init(*pdf, page_size, .PORTRAIT, .[20, 40, 35, 30]);
     if !success exit(1);
-
-    page_dimensions := get_net_page_dimensions(*pdf);
-    log("Page dimensions: %", page_dimensions);
 
     // Stubs
     logo_width := 150.0;
@@ -32,7 +29,10 @@ main :: () {
     footer_size := compute_text_size(*pdf, "Page 1 / 000");
     // log("Footer size: %", footer_size);
     // log("Newlined footer size: %", compute_text_size(*pdf, "Page\n1 / 000"));
-    set_page_footer_height(*pdf, footer_size.y);
+    set_page_footer_height(*pdf, footer_size.y + 10);
+
+    page_dimensions := get_net_page_dimensions(*pdf);
+    log("Page dimensions: %", page_dimensions);
 
     light_border_color := Vector3.{0.7, 0.7, 0.7};
     dark_border_color  := Vector3.{0.0, 0.0, 0.0};
@@ -106,8 +106,8 @@ main :: () {
     add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
     add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
-    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
-    add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+    // add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
+    // add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
 
     begin_table_footer(*pdf);
     set_row_border(*pdf, 1, .{0, 0, 0}, .TOP);
@@ -134,6 +134,10 @@ main :: () {
 
     for i: 0..pdf.pages.count-1 {
         begin_footer(*pdf, i);
+        current_position := get_position(*pdf);
+        line_height := get_line_height(*pdf);
+        set_text_alignment(*pdf, .RIGHT);
+        set_position(*pdf, current_position.x, current_position.y - line_height);
         add_text(*pdf, tprint("Page % of %", i + 1, pdf.pages.count));
         end_footer(*pdf);
     }

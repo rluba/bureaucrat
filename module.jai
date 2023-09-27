@@ -1,30 +1,44 @@
 Pdf :: #import,file "libharu/unix.jai";
 
 Document :: struct {
-    pdf_context: Pdf_Context;
-    haru_doc: Pdf.Doc;
-    pages: [..] Pdf.Page;
+    pdf_context:        Pdf_Context;
+    haru_doc:           Pdf.Doc;
+    pages:              [..] Pdf.Page;
+    page_infos:         [..] Page_Info;
 
-    page_size: Pdf.PageSizes;
-    page_orientation: Pdf.PageDirection;
-    page_margins: [4] float;
-    page_background: Vector3;
-    text_color: Vector3;
+    current_page:       Pdf.Page;
+    current_page_info: *Page_Info;
+    current_area:       Render_Area;
 
-    header_height: float;
-    footer_height: float;
+    page_size:          Pdf.PageSizes;
+    page_orientation:   Pdf.PageDirection;
+    page_margins:       [4] float;
+    page_background:    Vector3;
+    text_color:         Vector3;
 
-    alignment: Pdf.TextAlignment;
-    font: Pdf.Font;
-    font_size: float;
-    word_wrap := true;
+    alignment:          Pdf.TextAlignment;
+    font:               Pdf.Font;
+    font_size:          float;
+    word_wrap           := true;
     line_height_factor: float = 1.3;
 
-    padding: Vector2;
+    padding:            Vector2;
 
-    position: Vector2;
+    position:           Vector2;
 
-    table: *Table;
+    table:              *Table;
+
+    Render_Area :: enum {
+        BODY;
+        HEADER;
+        FOOTER;
+    }
+}
+
+Page_Info :: struct {
+    header_height: float;
+    footer_height: float;
+    position:    Vector2;
 }
 
 Table :: struct {
@@ -119,6 +133,12 @@ deinit :: (document: *Document) {
 }
 
 add_page :: (using document: *Document) {
+    assert(current_area == .BODY);
+
+    if pages.count && current_area == .BODY {
+        current_page_info.position = position; // Save the last position;
+    }
+
     page := Pdf.AddPage(haru_doc);
     Pdf.Page_SetSize(page, page_size, page_orientation);
     if font {
@@ -126,11 +146,20 @@ add_page :: (using document: *Document) {
         Pdf.Page_SetTextLeading(page, font_size * line_height_factor);
     }
 
+    page_info: Page_Info;
+    if current_page_info {
+        page_info = <<current_page_info;
+    }
+
     array_add(*pages, page);
+    current_page_info = array_add(*page_infos);
+    <<current_page_info = page_info;
+    current_page = page;
+    current_area = .BODY;
 
     height := Pdf.Page_GetHeight(page);
     position.x = page_margins[3];
-    position.y = height - page_margins[0];
+    position.y = height - page_margins[0] - current_page_info.header_height;
 
     Pdf.Page_SetRGBFill(page, page_background.x, page_background.y, page_background.z);
     Pdf.Page_Rectangle(page, 0, 0, Pdf.Page_GetWidth(page), height);
@@ -143,15 +172,27 @@ add_page :: (using document: *Document) {
     //     pattern := float.[3, 7];
     //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
     //     Pdf.Page_SetRGBStroke(page, 0.4, 0.4, 0.9);
-    //     Pdf.Page_Rectangle(page, page_margins[3], page_margins[2], get_net_page_width(document, page), get_net_page_height(document, page));
+    //     Pdf.Page_Rectangle(page, page_margins[3], page_margins[2] + current_page_info.footer_height, get_net_page_width(document, page), get_net_page_height(document, page));
     //     Pdf.Page_Stroke(page);
+
+    //     if current_page_info.header_height {
+    //         Pdf.Page_SetRGBStroke(page, 0.9, 0.4, 0.4);
+    //         Pdf.Page_Rectangle(page, page_margins[3], page_margins[2] + get_net_page_height(document, page) + current_page_info.footer_height, get_net_page_width(document, page), current_page_info.header_height);
+    //         Pdf.Page_Stroke(page);
+    //     }
+    //     if current_page_info.footer_height {
+    //         Pdf.Page_SetRGBStroke(page, 0.9, 0.4, 0.4);
+    //         Pdf.Page_Rectangle(page, page_margins[3], page_margins[2], get_net_page_width(document, page), current_page_info.footer_height);
+    //         Pdf.Page_Stroke(page);
+    //     }
+
     //     Pdf.Page_SetDash(page, null, 0, 0);
     //     Pdf.Page_SetRGBStroke(page, 0, 0, 0);
     // }
 }
 
 get_current_page :: (using document: *Document) -> Pdf.Page {
-    return pages[pages.count - 1];
+    return current_page;
 }
 
 get_net_page_dimensions :: (using document: *Document) -> Vector2 {
@@ -161,12 +202,12 @@ get_net_page_dimensions :: (using document: *Document) -> Vector2 {
 
 get_net_page_width :: (using document: *Document) -> float {
     page := get_current_page(document);
-    return Pdf.Page_GetWidth(page) - page_margins[1] - page_margins[3];
+    return get_net_page_width(document, page);
 }
 
 get_net_page_height :: (using document: *Document) -> float {
     page := get_current_page(document);
-    return Pdf.Page_GetHeight(page) - page_margins[0] - page_margins[2];
+    return get_net_page_height(document, page);
 }
 
 get_net_page_width :: (using document: *Document, page: Pdf.Page) -> float {
@@ -174,7 +215,7 @@ get_net_page_width :: (using document: *Document, page: Pdf.Page) -> float {
 }
 
 get_net_page_height :: (using document: *Document, page: Pdf.Page) -> float {
-    return Pdf.Page_GetHeight(page) - page_margins[0] - page_margins[2];
+    return Pdf.Page_GetHeight(page) - page_margins[0] - page_margins[2] - current_page_info.footer_height;
 }
 
 set_font :: (document: *Document, font: Pdf.Font, size: float) {
@@ -241,11 +282,41 @@ compute_text_size :: (using document: *Document, text: string, text_font: Pdf.Fo
 }
 
 set_page_header_height :: (using document: *Document, height: float) {
-    header_height = height;
+    current_page_info.header_height = height;
+    // For debugging:
+    // if current_page_info.header_height {
+    //     page := get_current_page(document);
+    //     pattern := float.[3, 7];
+    //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
+
+    //     if current_page_info.header_height {
+    //         Pdf.Page_SetRGBStroke(page, 0.9, 0.4, 0.4);
+    //         Pdf.Page_Rectangle(page, page_margins[3], page_margins[2] + get_net_page_height(document, page) + current_page_info.footer_height, get_net_page_width(document, page), current_page_info.header_height);
+    //         Pdf.Page_Stroke(page);
+    //     }
+
+    //     Pdf.Page_SetDash(page, null, 0, 0);
+    //     Pdf.Page_SetRGBStroke(page, 0, 0, 0);
+    // }
 }
 
 set_page_footer_height :: (using document: *Document, height: float) {
-    footer_height = height;
+    current_page_info.footer_height = height;
+    // For debugging:
+    // if current_page_info.footer_height {
+    //     page := get_current_page(document);
+    //     pattern := float.[3, 7];
+    //     Pdf.Page_SetDash(page, pattern.data, pattern.count, 3);
+
+    //     if current_page_info.footer_height {
+    //         Pdf.Page_SetRGBStroke(page, 0.9, 0.4, 0.4);
+    //         Pdf.Page_Rectangle(page, page_margins[3], page_margins[2], get_net_page_width(document, page), current_page_info.footer_height);
+    //         Pdf.Page_Stroke(page);
+    //     }
+
+    //     Pdf.Page_SetDash(page, null, 0, 0);
+    //     Pdf.Page_SetRGBStroke(page, 0, 0, 0);
+    // }
 }
 
 add_image :: (using document: *Document, logo: $T, logo_width: float, logo_height: float) {
@@ -254,16 +325,16 @@ add_image :: (using document: *Document, logo: $T, logo_width: float, logo_heigh
 
 set_position :: (using document: *Document, x: float, y: float) {
     position.x = x + page_margins[3];
-    position.y = y + page_margins[2];
+    position.y = y + page_margins[2] + current_page_info.footer_height;
 }
 
 set_position :: (using document: *Document, new_position: Vector2) {
     position.x = new_position.x + page_margins[3];
-    position.y = new_position.y + page_margins[2];
+    position.y = new_position.y + page_margins[2] + current_page_info.footer_height;
 }
 
 get_position :: (using document: *Document) -> Vector2 {
-    return .{position.x - page_margins[3], position.y - page_margins[2]};
+    return .{position.x - page_margins[3], position.y - page_margins[2] - current_page_info.footer_height};
 }
 
 get_line_height :: (using document: *Document) -> float {
@@ -302,7 +373,7 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
     offset := 0;
     success := true;
     while offset < text.count {
-        if position.y < page_margins[2] {
+        if current_area == .BODY && position.y < page_margins[2] + current_page_info.footer_height {
             Pdf.Page_EndText(page);
             add_page(document);
             page = get_current_page(document);
@@ -403,11 +474,28 @@ set_padding :: (document: *Document, padding: Vector2) {
 }
 
 begin_footer :: (using document: *Document, page_index: int) {
-    // @Incomplete
+    assert(page_index >= 0 && page_index < pages.count);
+    assert(current_area == .BODY);
+
+    // Save the current position on the page we’re leaving
+    current_page_info.position = position;
+
+    current_page      = pages[page_index];
+    current_page_info = *page_infos[page_index];
+
+    current_area = .FOOTER;
+    position.x = page_margins[3];
+    position.y = page_margins[2] + current_page_info.footer_height;
 }
 
 end_footer :: (using document: *Document) {
-    // @Incomplete
+    assert(current_area == .FOOTER);
+    current_page      = pages[pages.count - 1];
+    current_page_info = *page_infos[page_infos.count - 1];
+
+    current_area = .BODY;
+    // Restore the last position
+    position = current_page_info.position;
 }
 
 begin_table :: (using document: *Document, column_widths: .. float) {
@@ -530,7 +618,7 @@ add_table_cell :: (using document: *Document, data: Table.Cell_Content) {
         if table.last_row  y_after_last_row -= table.last_row[0].height;
         compute_height(document, table.current_row);
 
-        current_row_fits := (y_after_last_row - table.current_row[0].height >= page_margins[2]);
+        current_row_fits := (y_after_last_row - table.current_row[0].height >= page_margins[2] + current_page_info.footer_height);
 
         // Pull the last row onto next page if the first footer row does not fit on the new page so that
         // the footer is never alone on its own page.
@@ -572,7 +660,7 @@ add_table_cell :: (using document: *Document, data: Table.Cell_Content) {
         table.current_row[0].row_start = position;
 
         // @Incomplete: What do we do if a row doesn’t fit on the page on its own!?
-        assert(position.y - table.current_row[0].height >= page_margins[2]);
+        assert(position.y - table.current_row[0].height >= page_margins[2] + current_page_info.footer_height);
 
         if !table.header {
             array_copy(*table.header, table.current_row);
