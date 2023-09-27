@@ -72,9 +72,9 @@ main :: () {
     set_row_border(*pdf, 0);
     set_row_border(*pdf, 4, light_border_color, .BOTTOM);
     set_default_cell_paddings(*pdf, .{5, 10}, .{5, 10}, .{5, 10});
-    add_cell(*pdf, "Description");
-    add_cell(*pdf, "VAT");
-    add_cell(*pdf, "Amount");
+    add_table_cell(*pdf, "Description");
+    add_table_cell(*pdf, "VAT");
+    add_table_cell(*pdf, "Amount");
 
     // Body
     set_default_cell_paddings(*pdf, .{5, 7}, .{5, 7}, .{5, 7});
@@ -113,20 +113,20 @@ main :: () {
     set_row_border(*pdf, 1, .{0, 0, 0}, .TOP);
     set_cell_border(*pdf, 0, .{0, 0, 0}, .BOTTOM);
     set_text_alignment(*pdf, .RIGHT);
-    add_cell(*pdf, .{colspan = 2, text = "Subtotal excluding VAT"});
-    add_cell(*pdf, "€ 1.935,00");
+    add_table_cell(*pdf, .{colspan = 2, text = "Subtotal excluding VAT"});
+    add_table_cell(*pdf, "€ 1.935,00");
     set_row_border(*pdf, 0, direction = .TOP);
 
     set_text_alignment(*pdf, .RIGHT);
-    add_cell(*pdf, .{colspan = 2, text = tprint("+ VAT % %%", vat_percent)});
+    add_table_cell(*pdf, .{colspan = 2, text = tprint("+ VAT % %%", vat_percent)});
     set_cell_border(*pdf, 1, .{0, 0, 0}, .BOTTOM);
-    add_cell(*pdf, "€ 387,00");
+    add_table_cell(*pdf, "€ 387,00");
 
     set_font(*pdf, bold_text_font, text_font_size);
     set_text_alignment(*pdf, .RIGHT);
     set_row_border(*pdf, 0, .{0, 0, 0}, .BOTTOM);
-    add_cell(*pdf, .{colspan = 2, text = "Total"});
-    add_cell(*pdf, "€ 2.322,00");
+    add_table_cell(*pdf, .{colspan = 2, text = "Total"});
+    add_table_cell(*pdf, "€ 2.322,00");
 
     end_table(*pdf);
 

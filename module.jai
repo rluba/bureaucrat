@@ -34,8 +34,9 @@ Table :: struct {
 
     header:         [..] Cell_State;
 
-    last_row:       [..] Cell_State;
-    current_row:    [..] Cell_State;
+    second_to_last_row: [..] Cell_State;
+    last_row:           [..] Cell_State;
+    current_row:        [..] Cell_State;
 
     num_rows        := 0;
     num_footer_rows := -1;
@@ -67,6 +68,7 @@ Table :: struct {
         font_size: float;
 
         skipped: bool;
+        row_start: Vector2;
         width: float;
         height: float;
         merged_borders: [4] Border; // @ToDo: Set when the cell is created an when we merge
@@ -489,14 +491,14 @@ set_cell_border :: (using document: *Document, size: float, color := Vector3.{0,
 add_table_row :: (using document: *Document, texts: .. string) {
     assert(table != null);
     assert(texts.count == table.columns.count);
-    for texts add_cell(document, it);
+    for texts add_table_cell(document, it);
 }
 
-add_cell :: (using document: *Document, text: string) {
-    add_cell(document, .{text = text});
+add_table_cell :: (using document: *Document, text: string) {
+    add_table_cell(document, .{text = text});
 }
 
-add_cell :: (using document: *Document, data: Table.Cell_Content) {
+add_table_cell :: (using document: *Document, data: Table.Cell_Content) {
     assert(table != null);
     assert(table.columns.count != 0);
 
@@ -510,6 +512,7 @@ add_cell :: (using document: *Document, data: Table.Cell_Content) {
     state.font = font;
     state.font_size = font_size;
     state.content = data;
+    state.merged_borders = state.style.borders;
 
     if state.content.colspan < 1 state.content.colspan = 1;
     assert(table.current_row.count + state.content.colspan <= table.columns.count);
@@ -523,28 +526,50 @@ add_cell :: (using document: *Document, data: Table.Cell_Content) {
         table.num_rows += 1;
         if table.num_footer_rows >= 0 table.num_footer_rows += 1;
 
-        compute_height(document, table.current_row);
         y_after_last_row := position.y;
         if table.last_row  y_after_last_row -= table.last_row[0].height;
+        compute_height(document, table.current_row);
 
         current_row_fits := (y_after_last_row - table.current_row[0].height >= page_margins[2]);
 
+        // Pull the last row onto next page if the first footer row does not fit on the new page so that
+        // the footer is never alone on its own page.
         render_last_row_on_next_page := table.last_row && !current_row_fits && table.num_footer_rows == 1;
 
         if table.last_row {
             if current_row_fits merge_borders(*table.last_row, *table.current_row);
-            if !render_last_row_on_next_page render_row(document, table.last_row);
+            if render_last_row_on_next_page {
+                // We need to re-render the row-before-last_row’s bottom border
+                // if it was removed by merge_border because we thought that last_row
+                // will be rendered after it.
+                needs_redraw := false;
+                for * table.second_to_last_row {
+                    if it.merged_borders[2].size != it.style.borders[2].size {
+                        it.merged_borders[2] = it.style.borders[2];
+                        needs_redraw = true;
+                    }
+                }
+                if needs_redraw  render_row(document, table.second_to_last_row, only_bottom_border = true);
+            } else {
+                render_row(document, table.last_row);
+            }
         }
 
         if !current_row_fits {
             add_page(document);
             row_below_header := ifx render_last_row_on_next_page then *table.last_row else *table.current_row;
             if table.header {
+                table.header[0].row_start = position;
                 merge_borders(*table.header, row_below_header);
                 render_row(document, table.header);
             }
-            if render_last_row_on_next_page render_row(document, table.last_row);
+            if render_last_row_on_next_page {
+                table.last_row[0].row_start = position;
+                render_row(document, table.last_row);
+            }
         }
+
+        table.current_row[0].row_start = position;
 
         // @Incomplete: What do we do if a row doesn’t fit on the page on its own!?
         assert(position.y - table.current_row[0].height >= page_margins[2]);
@@ -553,9 +578,11 @@ add_cell :: (using document: *Document, data: Table.Cell_Content) {
             array_copy(*table.header, table.current_row);
         }
 
-        old_last := table.last_row;
+
+        old := table.second_to_last_row;
+        table.second_to_last_row = table.last_row;
         table.last_row = table.current_row;
-        table.current_row = old_last;
+        table.current_row = old;
         array_reset_keeping_memory(*table.current_row);
     }
 
@@ -585,7 +612,6 @@ compute_height :: (using document: *Document, row: [] Table.Cell_State) {
     net_width := get_net_page_width(document);
 
     min_x: float;
-    row_start := position;
     max_height: float;
 
     for * col: row {
@@ -610,14 +636,14 @@ compute_height :: (using document: *Document, row: [] Table.Cell_State) {
 }
 
 
-render_row :: (using document: *Document, row: [] Table.Cell_State) {
+render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_border := false) {
     assert(table != null);
     assert(row.count == table.columns.count);
 
     net_width := get_net_page_width(document);
 
     min_x: float;
-    row_start := position;
+    row_start := row[0].row_start;
     min_y: float;
 
     for * col: row {
@@ -640,35 +666,34 @@ render_row :: (using document: *Document, row: [] Table.Cell_State) {
         haru_cell_start_x := page_margins[3] + cell_start_x;
         haru_content_start_x := page_margins[3] + content_start_x;
 
-        position.x = haru_content_start_x;
-        position.y = text_baseline_start_y;
-
-        draw_border :: (page: Pdf.Page, border: Table.Border, start_x: float, start_y: float, end_x: float, end_y: float) {
-            Pdf.Page_SetLineCap(page, .PROJECTING_SQUARE_END);
-            Pdf.Page_SetRGBStroke(page, border.color.x, border.color.y, border.color.z);
-            Pdf.Page_SetLineWidth(page, border.size);
-            Pdf.Page_MoveTo(page, start_x, start_y);
-            Pdf.Page_LineTo(page, end_x, end_y);
-            Pdf.Page_Stroke(page);
-        }
-
-        // Placeholder for real borders:
+        // Render borders
         page := get_current_page(document);
-        borders := col.style.borders; // @ToDo: merged_borders
-        if borders[0].size > 0 {
-            draw_border(page, borders[0], haru_cell_start_x, row_start.y, haru_cell_start_x + col.width, row_start.y);
-        }
-        if borders[1].size > 0 {
-            draw_border(page, borders[1], haru_cell_start_x + col.width, row_start.y, haru_cell_start_x + col.width, row_start.y - col.height);
-        }
-        if borders[2].size > 0 {
-            draw_border(page, borders[2], haru_cell_start_x + col.width, row_start.y - col.height, haru_cell_start_x, row_start.y - col.height);
-        }
-        if borders[3].size > 0 {
-            draw_border(page, borders[3], haru_cell_start_x, row_start.y - col.height, haru_cell_start_x, row_start.y);
+        borders := col.merged_borders;
+        if !only_bottom_border {
+            if borders[0].size > 0 {
+                render_row_border(page, borders[0], haru_cell_start_x, row_start.y, haru_cell_start_x + col.width, row_start.y);
+            }
+            if borders[1].size > 0 {
+                render_row_border(page, borders[1], haru_cell_start_x + col.width, row_start.y, haru_cell_start_x + col.width, row_start.y - col.height);
+            }
         }
 
-        render_text(document, col.content.text, col.font, col.font_size, col.style.alignment, min_x = content_start_x, max_width = content_width);
+        if borders[2].size > 0 {
+            render_row_border(page, borders[2], haru_cell_start_x + col.width, row_start.y - col.height, haru_cell_start_x, row_start.y - col.height);
+        }
+
+        if !only_bottom_border {
+            if borders[3].size > 0 {
+                render_row_border(page, borders[3], haru_cell_start_x, row_start.y - col.height, haru_cell_start_x, row_start.y);
+            }
+        }
+
+        if !only_bottom_border {
+            position.x = haru_content_start_x;
+            position.y = text_baseline_start_y;
+
+            render_text(document, col.content.text, col.font, col.font_size, col.style.alignment, min_x = content_start_x, max_width = content_width);
+        }
         min_x += col.width;
 
         // // For debugging:
@@ -689,11 +714,30 @@ render_row :: (using document: *Document, row: [] Table.Cell_State) {
         // Pdf.Page_SetRGBStroke(page, 0, 0, 0);
     }
 
-    position.y = row_start.y - row[0].height;
+    if !only_bottom_border {
+        position.y = row_start.y - row[0].height;
+    }
 }
 
+render_row_border :: (page: Pdf.Page, border: Table.Border, start_x: float, start_y: float, end_x: float, end_y: float) {
+    Pdf.Page_SetLineCap(page, .PROJECTING_SQUARE_END);
+    Pdf.Page_SetRGBStroke(page, border.color.x, border.color.y, border.color.z);
+    Pdf.Page_SetLineWidth(page, border.size);
+    Pdf.Page_MoveTo(page, start_x, start_y);
+    Pdf.Page_LineTo(page, end_x, end_y);
+    Pdf.Page_Stroke(page);
+}
+
+
 merge_borders :: (upper: *[] Table.Cell_State, lower: *[] Table.Cell_State) {
-    // @Incomplete
+    assert(upper.count == lower.count);
+    for i: 0..upper.count-1 {
+        if (<<upper)[i].style.borders[2].size > (<<lower)[i].style.borders[0].size {
+            (<<lower)[i].merged_borders[0].size = 0;
+        } else {
+            (<<upper)[i].merged_borders[2].size = 0;
+        }
+    }
 }
 
 
