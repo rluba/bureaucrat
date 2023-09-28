@@ -17,11 +17,30 @@ main :: () {
     logo_width := 150.0;
     logo_height := 50.0;
     logo_padding := 5;
-    title_font := Pdf.GetFont(pdf.haru_doc, "Helvetica", null);
+
+    base_path := path_strip_filename(get_path_of_running_executable());
+    font_folder := join(base_path, "Open_Sans/static");
+
+    load_font_or_exit :: (document: *Document, filename: string) -> *u8 #expand {
+        result := Pdf.LoadTTFontFromFile(document.haru_doc, tprint("%/%\0", font_folder, filename).data, xx true);
+        if !result {
+            error := Pdf.GetError(document.haru_doc);
+            error_detail := Pdf.GetErrorDetail(document.haru_doc);
+            error_string := get_error_string(xx error_detail);
+            log_error("Could not load font \"%\": % % %", filename, error, error_detail, error_string);
+            exit(1);
+        }
+        return result;
+    }
+
+    open_sans_regular  := load_font_or_exit(*pdf, "OpenSans-Regular.ttf");
+    open_sans_semibold := load_font_or_exit(*pdf, "OpenSans-SemiBold.ttf");
+
+    title_font := Pdf.GetFont(pdf.haru_doc, open_sans_regular, "UTF-8");
     subtitle_font := title_font;
     text_font := title_font;
-    bold_text_font := title_font;
-    table_header_font := title_font;
+    bold_text_font := Pdf.GetFont(pdf.haru_doc, open_sans_semibold, "UTF-8");
+    table_header_font := bold_text_font;
     title_font_size := 21.0;
     text_font_size := 14.0;
 
@@ -34,8 +53,7 @@ main :: () {
     page_dimensions := get_net_page_dimensions(*pdf);
     log("Page dimensions: %", page_dimensions);
 
-    light_border_color := Vector3.{0.7, 0.7, 0.7};
-    dark_border_color  := Vector3.{0.0, 0.0, 0.0};
+    light_border_color := Vector3.{0.89, 0.91, 0.94};
 
     logo: string; // @ToDo
     rich_text_header := "<div><b>Strong words<b> from our leader</div>";
@@ -70,7 +88,7 @@ main :: () {
     set_default_cell_alignments(*pdf, .LEFT, .RIGHT, .RIGHT);
     set_font(*pdf, table_header_font, text_font_size);
     set_row_border(*pdf, 0);
-    set_row_border(*pdf, 4, light_border_color, .BOTTOM);
+    set_row_border(*pdf, 2, light_border_color, .BOTTOM);
     set_default_cell_paddings(*pdf, .{5, 10}, .{5, 10}, .{5, 10});
     add_table_cell(*pdf, "Description");
     add_table_cell(*pdf, "VAT");
@@ -80,7 +98,6 @@ main :: () {
     set_default_cell_paddings(*pdf, .{5, 7}, .{5, 7}, .{5, 7});
     set_font(*pdf, text_font, text_font_size);
     set_row_border(*pdf, 0);
-    set_row_border(*pdf, 1, .{0, 0, 0}, .TOP);
     set_row_border(*pdf, 1, light_border_color, .BOTTOM);
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,\n83");
     add_table_row(*pdf, "i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i", "20 %", "€ 66,67");
@@ -136,6 +153,7 @@ main :: () {
         begin_footer(*pdf, i);
         current_position := get_position(*pdf);
         line_height := get_line_height(*pdf);
+        set_font(*pdf, text_font, text_font_size);
         set_text_alignment(*pdf, .RIGHT);
         set_position(*pdf, current_position.x, current_position.y - line_height);
         add_text(*pdf, tprint("Page % of %", i + 1, pdf.pages.count));
@@ -152,3 +170,6 @@ main :: () {
 
 #import "Basic";
 #import "Math";
+// #import "File_Utilities";
+#import "String";
+#import "System";

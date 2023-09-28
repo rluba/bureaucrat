@@ -113,6 +113,7 @@ init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.Pa
     }
 
     Pdf.UseUTFEncodings(pdf);
+    // Pdf.SetCurrentEncoder(pdf, "UTF-8"); // Seems like it’s not necessary
 
     document.haru_doc = pdf;
 
@@ -348,7 +349,7 @@ add_text :: (using document: *Document, text: string, max_width: float = -1) -> 
 }
 
 render_text :: (using document: *Document, text: string, text_font: Pdf.Font, text_font_size: float, text_alignment: Pdf.TextAlignment, min_x: float = -1, max_width: float = -1) -> bool {
-    log("render_text: \"%\" % %", text, text_font, text_font_size);
+    // log("render_text: \"%\" % %", text, text_font, text_font_size);
     c_text := temp_c_string(text); // @Speed
 
     page := get_current_page(document);
