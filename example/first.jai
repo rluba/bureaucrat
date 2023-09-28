@@ -1,0 +1,17 @@
+#run {
+    set_build_options_dc(.{do_output = false});
+
+    w := compiler_create_workspace("Example");
+
+    options := get_build_options(w);
+    copy_commonly_propagated_fields(get_build_options(), *options);
+    options.output_executable_name = "example";
+    #if OS == .MACOS {
+        options.additional_linker_arguments = .["-L", "/usr/local/homebrew/lib"]; // This is where my x64 libraries live. Adjust to fit your needs.
+    }
+    set_build_options(options, w);
+
+    add_build_file("example.jai", w);
+}
+
+#import "Compiler";

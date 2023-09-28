@@ -1,7 +1,7 @@
 .build/
+example/example
 libharu/libharu-*/
 libharu/*_build/
 libharu/*/share/
 libharu/test
-example
 *.dSYM
