@@ -3,8 +3,7 @@ AT_COMPILE_TIME :: true;
 COMPILE       :: false; // Enable to compile the libharu library from source before generating bindings.
 // COMPILE_DEBUG :: false; // Compile a debug or release version of libharu?
 
-// We don’t ship the libharu source with this module. Download a libharui release and update this path if you want to re-generate the bindings.
-LIBHARU_PATH :: "libharu-2.4.4";
+LIBHARU_PATH :: "libharu_source";
 
 DECLARATIONS_TO_OMIT :: string.[
 ];
