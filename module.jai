@@ -342,6 +342,10 @@ get_line_height :: (using document: *Document) -> float {
     return font_size * line_height_factor;
 }
 
+begin_text_line :: (using document: *Document) {
+    position.y -= get_line_height(document);
+}
+
 add_text :: (using document: *Document, text: string, max_width: float = -1) -> bool {
     // @Incomplete: Respect document.padding!
     // @Incomplete @ToDo: Check if a table is active!
@@ -462,8 +466,16 @@ add_rich_text :: (using document: *Document, html_content: string) {
     // @Incomplete
 }
 
-add_hr :: (using document: *Document, h_margin: float = 0) {
-    // @Incomplete
+add_horiziontal_line :: (using document: *Document, color: Vector3) {
+    page:= get_current_page(document);
+
+    hr_width := 1.0;
+    start_x := page_margins[3] + padding.x;
+    start_y := position.y - padding.y;
+    render_row_border(page, .{hr_width, color}, start_x, start_y, start_x + get_net_page_width(document, page) - 2 * padding.x, start_y);
+
+    position.x = page_margins[3];
+    position.y -= hr_width + 2 * padding.y;
 }
 
 set_text_alignment :: (document: *Document, text_alignment: Pdf.TextAlignment) {

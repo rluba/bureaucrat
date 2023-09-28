@@ -63,8 +63,9 @@ main :: () {
 
 
     add_image(*pdf, logo, logo_width, logo_height);
-    set_position(*pdf, 0, page_dimensions.y - get_line_height(*pdf));
+    set_position(*pdf, 0, page_dimensions.y);
     set_font(*pdf, title_font, title_font_size);
+    begin_text_line(*pdf);
     add_text(*pdf, "Invoice\n", max_width = page_dimensions.x - logo_width - logo_padding);
     // add_text(*pdf, "Below the title", max_width = page_dimensions.x - logo_width - logo_padding);
     // add_text(*pdf, "Appended below the title and wrapping almost certainly. Must be the case, right?", max_width = page_dimensions.x - logo_width - logo_padding);
@@ -72,11 +73,19 @@ main :: () {
 
     current_position := get_position(*pdf);
     after_logo_and_title := Min(current_position.y, page_dimensions.y - (logo_height + logo_padding));
-    set_position(*pdf, 0, after_logo_and_title - get_line_height(*pdf));
-    add_rich_text(*pdf, rich_text_header);
-    add_hr(*pdf);
+    set_position(*pdf, 0, after_logo_and_title);
+    begin_text_line(*pdf);
+
+    if rich_text_header {
+        add_rich_text(*pdf, rich_text_header);
+
+        set_padding(*pdf, .{0, 10});
+        add_horiziontal_line(*pdf, light_border_color);
+        set_padding(*pdf, .{0, 0});
+    }
 
     set_font(*pdf, subtitle_font, text_font_size);
+    begin_text_line(*pdf);
     add_text(*pdf, "To\n");
     add_text(*pdf, formatted_address);
     add_text(*pdf, "\n");
@@ -99,7 +108,7 @@ main :: () {
     set_font(*pdf, text_font, text_font_size);
     set_row_border(*pdf, 0);
     set_row_border(*pdf, 1, light_border_color, .BOTTOM);
-    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,\n83");
+    add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
     add_table_row(*pdf, "i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i", "20 %", "€ 66,67");
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
     add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
@@ -151,11 +160,10 @@ main :: () {
 
     for i: 0..pdf.pages.count-1 {
         begin_footer(*pdf, i);
-        current_position := get_position(*pdf);
         line_height := get_line_height(*pdf);
         set_font(*pdf, text_font, text_font_size);
         set_text_alignment(*pdf, .RIGHT);
-        set_position(*pdf, current_position.x, current_position.y - line_height);
+        begin_text_line(*pdf);
         add_text(*pdf, tprint("Page % of %", i + 1, pdf.pages.count));
         end_footer(*pdf);
     }
