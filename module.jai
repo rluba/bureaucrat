@@ -753,9 +753,9 @@ render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_
         content_width := col.width - 2 * col.style.padding.x;
 
         descender_int_offset := Pdf.Font_GetDescent(col.font);
-        descender_offset := (descender_int_offset * font_size) / 1000.0;
+        descender_offset := (descender_int_offset * col.font_size) / 1000.0;
         ascender_int_offset := Pdf.Font_GetAscent(col.font);
-        ascender_offset := (ascender_int_offset * font_size) / 1000.0;
+        ascender_offset := (ascender_int_offset * col.font_size) / 1000.0;
 
         line_height := col.font_size * line_height_factor;
         font_padding := line_height + descender_offset - ascender_offset;
