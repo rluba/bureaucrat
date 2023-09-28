@@ -54,10 +54,8 @@ generate_bindings :: () -> bool {
         array_add(*include_paths, libharu_include_path);
         array_add(*source_files,  tprint("%/hpdf.h", libharu_include_path));
         array_add(*strip_prefixes, "HPDF");
-        // auto_detect_enum_prefixes = false;
         log_stripped_declarations = true;
-        generate_compile_time_struct_checks = true;
-        // strip_flags |= .INLINED_FUNCTIONS; // "inline" functions are not present in the static library.
+        generate_compile_time_struct_checks = false;
 
         visitor   = libharu_visitor;
     }
@@ -110,13 +108,6 @@ build_libharu :: () -> bool {
 	);
 
     #if OS == .MACOS {
-        // I thought that we need to specify the architecture on macOS to avoid getting an arm build on a M1 machine.
-        // But for some reason this cmake build builds for x64 by default. That’s what we want for now,
-        // but if it ever changes, we should be able to control it via this variable:
-        //  -rluba, 2022-06-13
-        // array_add(*config_command,
-        //     "-DCMAKE_OSX_ARCHITECTURES=x86_64",
-        // );
         using options := get_build_options();
         array_add(*config_command, tprint("-DCMAKE_OSX_DEPLOYMENT_TARGET=%.%", minimum_macos_version.major, minimum_macos_version.minor));
     }
@@ -126,9 +117,6 @@ build_libharu :: () -> bool {
     log("Building libharu…");
     build_command: [..] string;
     array_add(*build_command, "cmake", "--build", absolute_build_dir, "--target", "install");
-    // if (check_if_cmake_supports_parallel_jobs()) {
-    //     array_add(*build_command, "--parallel", tprint("%", NUM_PARALLEL_CMAKE_JOBS));
-    // }
     run_or_exit(..build_command);
 	log("Done building libharu");
 
