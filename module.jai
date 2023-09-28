@@ -349,7 +349,7 @@ begin_text_line :: (using document: *Document) {
 add_text :: (using document: *Document, text: string, max_width: float = -1) -> bool {
     // @Incomplete: Respect document.padding!
     // @Incomplete @ToDo: Check if a table is active!
-    return render_text(document, text, font, font_size, alignment, max_width);
+    return render_text(document, text, font, font_size, alignment, max_width = max_width);
 }
 
 render_text :: (using document: *Document, text: string, text_font: Pdf.Font, text_font_size: float, text_alignment: Pdf.TextAlignment, min_x: float = -1, max_width: float = -1) -> bool {
