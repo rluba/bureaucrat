@@ -156,6 +156,21 @@ main :: () {
 
     end_table(*pdf);
 
+    set_font(*pdf, text_font, text_font_size);
+    begin_text_line(*pdf);
+    add_text(*pdf, "Special discount: ");
+    set_strikethrough(*pdf, 1.5);
+    add_text(*pdf, "€ 100");
+    set_strikethrough(*pdf, 0);
+    add_text(*pdf, " € 25 ");
+
+    set_underline(*pdf, 1.5);
+    set_text_color(*pdf, .{0.24, 0.72, 0.73});
+    add_text(*pdf, "Details");
+    set_underline(*pdf, 0);
+    set_text_color(*pdf, .{0, 0, 0});
+
+
     for i: 0..pdf.pages.count-1 {
         begin_footer(*pdf, i);
         line_height := get_line_height(*pdf);

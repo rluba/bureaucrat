@@ -17,8 +17,7 @@ Document :: struct {
     text_color:         Vector3;
 
     alignment:          Pdf.TextAlignment;
-    font:               Pdf.Font;
-    font_size:          float;
+    font_settings:      Font_Settings;
     word_wrap           := true;
     line_height_factor: float = 1.3;
 
@@ -34,6 +33,15 @@ Document :: struct {
         HEADER;
         FOOTER;
     }
+}
+
+Font_Settings :: struct {
+    font:                Pdf.Font;
+    font_size:           float;
+    color:               Vector3;
+
+    strikethrough_width: float;
+    underline_width:     float;
 }
 
 Render_Limits :: struct {
@@ -84,8 +92,7 @@ Table :: struct {
         content: Cell_Content;
         style: Cell_Style;
 
-        font: Pdf.Font;
-        font_size: float;
+        font_settings: Font_Settings;
 
         skipped: bool;
         row_start: Vector2;
@@ -119,7 +126,7 @@ init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.Pa
     }
 
     Pdf.UseUTFEncodings(pdf);
-    // Pdf.SetCurrentEncoder(pdf, "UTF-8"); // Seems like it’s not necessary
+    Pdf.SetCurrentEncoder(pdf, "UTF-8"); // Seems like it’s not necessary
 
     document.haru_doc = pdf;
 
@@ -152,10 +159,6 @@ add_page :: (using document: *Document) -> Pdf.Page {
     page := Pdf.AddPage(haru_doc);
     assert(page != null);
     Pdf.Page_SetSize(page, page_size, page_orientation);
-    if font {
-        Pdf.Page_SetFontAndSize(page, font, font_size);
-        Pdf.Page_SetTextLeading(page, font_size * line_height_factor);
-    }
 
     page_info: Page_Info;
     if current_page_info {
@@ -240,13 +243,25 @@ clear_limits :: (document: *Document) {
     document.limits.width = get_net_page_width(document);
 }
 
-set_font :: (document: *Document, font: Pdf.Font, size: float) {
-    document.font = font;
-    document.font_size = size;
+set_font :: (using document: *Document, font: Pdf.Font, size: float) {
+    font_settings.font      = font;
+    font_settings.font_size = size;
+}
+
+set_text_color :: (using document: *Document, color: Vector3) {
+    font_settings.color = color;
+}
+
+set_strikethrough :: (using document: *Document, width: float) {
+    font_settings.strikethrough_width = width;
+}
+
+set_underline :: (using document: *Document, width: float) {
+    font_settings.underline_width = width;
 }
 
 compute_text_size :: (using document: *Document, text: string, max_width: float = -1) -> Vector2, success: bool {
-    size, success := compute_text_size(document, text, font, font_size, max_width);
+    size, success := compute_text_size(document, text, font_settings.font, font_settings.font_size, max_width);
     return size, success;
 }
 
@@ -356,12 +371,12 @@ get_position :: (using document: *Document) -> Vector2 {
 }
 
 get_line_height :: (using document: *Document) -> float {
-    return font_size * line_height_factor;
+    return font_settings.font_size * line_height_factor;
 }
 
 begin_text_line :: (using document: *Document) {
-    ascender_int_offset := Pdf.Font_GetAscent(font);
-    ascender_offset := (ascender_int_offset * font_size) / 1000.0;
+    ascender_int_offset := Pdf.Font_GetAscent(font_settings.font);
+    ascender_offset := (ascender_int_offset * font_settings.font_size) / 1000.0;
 
     position.y -= ascender_offset;
     position.x = page_margins[3] + limits.x;
@@ -381,10 +396,10 @@ can_fit_height_on_current_page :: (using document: *Document, height: float) -> 
 add_text :: (using document: *Document, text: string) -> bool {
     // @Incomplete: Respect document.padding!
     assert(!table, "Adding text while rendering is not yet supported. Use add_table_cell() instead.");
-    return render_text(document, text, font, font_size, alignment, min_x = limits.x, max_width = limits.width);
+    return render_text(document, text, font_settings, alignment, min_x = limits.x, max_width = limits.width);
 }
 
-render_text :: (using document: *Document, text: string, text_font: Pdf.Font, text_font_size: float, text_alignment: Pdf.TextAlignment, min_x: float, max_width: float) -> bool {
+render_text :: (using document: *Document, text: string, settings: Font_Settings, text_alignment: Pdf.TextAlignment, min_x: float, max_width: float) -> bool {
     // log("render_text: \"%\" % %", text, text_font, text_font_size);
     c_text := temp_c_string(text); // @Speed
 
@@ -395,16 +410,22 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
     // render_row_border(page, .{1, .{0,1,0}}, haru_min_x, position.y, haru_min_x + max_width, position.y);
     line_height := get_line_height(document);
 
+    Pdf.Page_SetRGBFill(page, settings.color.x, settings.color.y, settings.color.z);
     Pdf.Page_BeginText(page);
-    Pdf.Page_SetFontAndSize(page, text_font, text_font_size);
-    Pdf.Page_SetTextLeading(page, text_font_size * line_height_factor);
+    Pdf.Page_SetFontAndSize(page, settings.font, settings.font_size);
+    Pdf.Page_SetTextLeading(page, settings.font_size * line_height_factor);
     Pdf.Page_MoveTextPos(page, position.x, position.y);
+
+    needs_lines := settings.underline_width > 0 || settings.strikethrough_width > 0;
+    lines: [..] Text_Line;
 
     offset := 0;
     success := true;
     while offset < text.count {
         if !can_fit_height_on_current_page(document, 0) { // 0 height because text goes up (mostly)
             Pdf.Page_EndText(page);
+            draw_text_lines(document, settings, lines);
+            array_reset_keeping_memory(*lines);
             page = add_page(document);
             begin_text_line(document);
             position.x = haru_min_x;
@@ -432,7 +453,6 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
                         line_characters = Pdf.Page_MeasureText(page, c_text + offset, remaining_width, 0, *line_width);
                     }
                     if line_characters == 0 {
-                        log("Uh oh");
                         Debug.breakpoint();
                         success = false;
                         break;
@@ -469,6 +489,8 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
             }
         }
 
+        if needs_lines array_add(*lines, .{position, line_width});
+
         if offset != text.count {
             Pdf.Page_MoveTextPos(page, -position.x + haru_min_x, -line_height);
             position.y -= line_height;
@@ -484,7 +506,34 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
 
     Pdf.Page_EndText(page);
 
+    draw_text_lines(document, settings, lines);
+    array_free(lines);
+
     return success;
+}
+
+// For drawing underlines / strikethroughs after rendering the whole text in one block
+Text_Line :: struct {
+    start: Vector2;
+    width: float;
+}
+
+draw_text_lines :: (using document: *Document, settings: Font_Settings, lines: [] Text_Line) {
+    page := get_current_page(document);
+    if lines Pdf.Page_SetLineCap(page, .BUTT_END);
+    for lines {
+        if settings.underline_width > 0 {
+            start_y := it.start.y - settings.underline_width;
+            render_line(page, settings.color, settings.underline_width, it.start.x, start_y, it.start.x + it.width, start_y);
+        }
+        if settings.strikethrough_width > 0 {
+            xheight_int_offset := Pdf.Font_GetXHeight(settings.font);
+            xheight_offset := (xheight_int_offset * settings.font_size) / 1000.0;
+            start_y := it.start.y + xheight_offset / 2;
+            render_line(page, settings.color, settings.strikethrough_width, it.start.x, start_y, it.start.x + it.width, start_y);
+        }
+    }
+
 }
 
 Resize_Mode :: enum {
@@ -680,8 +729,7 @@ add_table_cell :: (using document: *Document, data: Table.Cell_Content) {
     state.style.borders = default.borders;
     state.style.alignment = alignment;
     state.style.padding = padding;
-    state.font = font;
-    state.font_size = font_size;
+    state.font_settings = font_settings;
     state.content = data;
     state.merged_borders = state.style.borders;
 
@@ -817,9 +865,8 @@ compute_height :: (using document: *Document, row: [] Table.Cell_State) {
         }
 
         content_width := col.width - 2 * col.style.padding.x;
-        line_height := col.font_size * line_height_factor;
 
-        text_size := compute_text_size(document, col.content.text, col.font, col.font_size, content_width);
+        text_size := compute_text_size(document, col.content.text, col.font_settings.font, col.font_settings.font_size, content_width);
         col_height := text_size.y + 2 * col.style.padding.y;
         max_height = Max(max_height, col_height);
     }
@@ -845,12 +892,12 @@ render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_
 
         content_width := col.width - 2 * col.style.padding.x;
 
-        descender_int_offset := Pdf.Font_GetDescent(col.font);
-        descender_offset := (descender_int_offset * col.font_size) / 1000.0;
-        ascender_int_offset := Pdf.Font_GetAscent(col.font);
-        ascender_offset := (ascender_int_offset * col.font_size) / 1000.0;
+        descender_int_offset := Pdf.Font_GetDescent(col.font_settings.font);
+        descender_offset := (descender_int_offset * col.font_settings.font_size) / 1000.0;
+        ascender_int_offset := Pdf.Font_GetAscent(col.font_settings.font);
+        ascender_offset := (ascender_int_offset * col.font_settings.font_size) / 1000.0;
 
-        line_height := col.font_size * line_height_factor;
+        line_height := col.font_settings.font_size * line_height_factor;
         font_padding := line_height + descender_offset - ascender_offset;
 
         cell_start_x := min_x;
@@ -886,7 +933,7 @@ render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_
             position.x = haru_content_start_x;
             position.y = text_baseline_start_y;
 
-            render_text(document, col.content.text, col.font, col.font_size, col.style.alignment, min_x = content_start_x, max_width = content_width);
+            render_text(document, col.content.text, col.font_settings, col.style.alignment, min_x = content_start_x, max_width = content_width);
         }
         min_x += col.width;
 
@@ -915,8 +962,12 @@ render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_
 
 render_row_border :: (page: Pdf.Page, border: Table.Border, start_x: float, start_y: float, end_x: float, end_y: float) {
     Pdf.Page_SetLineCap(page, .PROJECTING_SQUARE_END);
-    Pdf.Page_SetRGBStroke(page, border.color.x, border.color.y, border.color.z);
-    Pdf.Page_SetLineWidth(page, border.size);
+    render_line(page, border.color, border.size, start_x, start_y, end_x, end_y);
+}
+
+render_line :: (page: Pdf.Page, color: Vector3, size: float, start_x: float, start_y: float, end_x: float, end_y: float) {
+    Pdf.Page_SetRGBStroke(page, color.x, color.y, color.z);
+    Pdf.Page_SetLineWidth(page, size);
     Pdf.Page_MoveTo(page, start_x, start_y);
     Pdf.Page_LineTo(page, end_x, end_y);
     Pdf.Page_Stroke(page);
