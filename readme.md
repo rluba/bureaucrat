@@ -16,3 +16,7 @@ This library is pretty new. What it is missing in features it probably makes up 
 ## libharu
 
 The module contains bindings for [`libharu`](https://github.com/libharu/libharu), a low-level PDF encoding library.
+
+** The Bindings_Generator in beta 0.1.075 requires a patch to generate the right bindings for `libharu`.
+Until 0.1.076 is released, you can apply `libharu/0001-Bindings_Generator-Fixed-that-using-Generate_Binding.patch` to fix the issue.**
+

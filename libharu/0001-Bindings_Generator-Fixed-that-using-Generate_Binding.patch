@@ -1,0 +1,38 @@
+From 6dfeddbf2733495fc61cb6f20c730b14baf850bd Mon Sep 17 00:00:00 2001
+From: Raphael Luba <raphael@leanbyte.com>
+Date: Mon, 25 Sep 2023 14:53:47 +0200
+Subject: [PATCH] Bindings_Generator: Fixed that using
+ Generate_Bindings_Options.strip_prefixes could generate invalid identifier
+ names
+
+---
+ modules/Bindings_Generator/module.jai | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/modules/Bindings_Generator/module.jai b/modules/Bindings_Generator/module.jai
+index e8e061306..d9e13f1df 100644
+--- a/modules/Bindings_Generator/module.jai
++++ b/modules/Bindings_Generator/module.jai
+@@ -5713,7 +5713,7 @@ stripped_name :: (name: string) -> string {
+         if begins_with(name, it) {
+             advance(*stripped, it.count);
+ 
+-            while stripped.count > 0 && stripped[0] == #char "_" {
++            while stripped.count > 1 && stripped[0] == #char "_" && is_valid_identifier_start(stripped[1]) {
+                 advance(*stripped);
+             }
+             break;
+@@ -5722,6 +5722,10 @@ stripped_name :: (name: string) -> string {
+     return stripped;
+ }
+ 
++is_valid_identifier_start :: (char: u8) -> bool {
++    return char == #char "_" || ((char & 0xDF) >= #char "A" && (char & 0xDF) <= #char "Z");
++}
++
+ print_struct_vtable :: (builder: *String_Builder, _struct: *Struct, extra_info: Struct_Extra_Info) {
+     assert(extra_info.vtable.count > 0);
+ 
+-- 
+2.40.0
+
