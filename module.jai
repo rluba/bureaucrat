@@ -391,7 +391,8 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
     page := get_current_page(document);
 
     haru_min_x := page_margins[3] + min_x;
-    render_row_border(page, .{1, .{0,1,0}}, haru_min_x, position.y, haru_min_x + max_width, position.y);
+    // For debugging line widths
+    // render_row_border(page, .{1, .{0,1,0}}, haru_min_x, position.y, haru_min_x + max_width, position.y);
     line_height := get_line_height(document);
 
     Pdf.Page_BeginText(page);
