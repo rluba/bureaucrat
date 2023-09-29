@@ -70,7 +70,9 @@ main :: () {
     set_position(*pdf, 0, page_dimensions.y);
     set_font(*pdf, title_font, title_font_size);
     begin_text_line(*pdf);
-    add_text(*pdf, "Invoice", max_width = page_dimensions.x - rendered_logo_dimensions.x - logo_padding);
+    set_limits(*pdf, .{0, page_dimensions.x - rendered_logo_dimensions.x - logo_padding});
+    add_text(*pdf, "Invoice");
+    clear_limits(*pdf);
 
     current_position := get_position(*pdf);
     after_logo_and_title := Min(current_position.y, page_dimensions.y - (rendered_logo_dimensions.y + logo_padding));

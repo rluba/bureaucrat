@@ -25,6 +25,7 @@ Document :: struct {
     padding:            Vector2;
 
     position:           Vector2;
+    limits:             Render_Limits;
 
     table:              *Table;
 
@@ -33,6 +34,11 @@ Document :: struct {
         HEADER;
         FOOTER;
     }
+}
+
+Render_Limits :: struct {
+    x: float;
+    width: float;
 }
 
 Page_Info :: struct {
@@ -123,7 +129,10 @@ init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.Pa
     document.page_background = page_background;
     document.text_color = text_color;
 
-    add_page(document);
+    document.limits.x = 0;
+    page := add_page(document);
+
+    document.limits.width = get_net_page_width(document, page);
 
     return true;
 }
@@ -141,6 +150,7 @@ add_page :: (using document: *Document) -> Pdf.Page {
     }
 
     page := Pdf.AddPage(haru_doc);
+    assert(page != null);
     Pdf.Page_SetSize(page, page_size, page_orientation);
     if font {
         Pdf.Page_SetFontAndSize(page, font, font_size);
@@ -159,7 +169,7 @@ add_page :: (using document: *Document) -> Pdf.Page {
     current_area = .BODY;
 
     height := Pdf.Page_GetHeight(page);
-    position.x = page_margins[3];
+    position.x = page_margins[3] + limits.x;
     position.y = height - page_margins[0] - current_page_info.header_height;
 
     Pdf.Page_SetRGBFill(page, page_background.x, page_background.y, page_background.z);
@@ -219,6 +229,15 @@ get_net_page_width :: (using document: *Document, page: Pdf.Page) -> float {
 
 get_net_page_height :: (using document: *Document, page: Pdf.Page) -> float {
     return Pdf.Page_GetHeight(page) - page_margins[0] - page_margins[2] - current_page_info.footer_height;
+}
+
+set_limits :: (document: *Document, limits: Render_Limits) {
+    document.limits = limits;
+}
+
+clear_limits :: (document: *Document) {
+    document.limits.x = 0;
+    document.limits.width = get_net_page_width(document);
 }
 
 set_font :: (document: *Document, font: Pdf.Font, size: float) {
@@ -345,7 +364,13 @@ begin_text_line :: (using document: *Document) {
     ascender_offset := (ascender_int_offset * font_size) / 1000.0;
 
     position.y -= ascender_offset;
+    position.x = page_margins[3] + limits.x;
     // position.y -= get_line_height(document);
+}
+
+add_newline :: (using document: *Document) {
+    position.y -= get_line_height(document);
+    position.x = page_margins[3] + limits.x;
 }
 
 can_fit_height_on_current_page :: (using document: *Document, height: float) -> bool {
@@ -353,34 +378,26 @@ can_fit_height_on_current_page :: (using document: *Document, height: float) -> 
     return position.y - height >= page_margins[2] + current_page_info.footer_height;
 }
 
-add_text :: (using document: *Document, text: string, max_width: float = -1) -> bool {
+add_text :: (using document: *Document, text: string) -> bool {
     // @Incomplete: Respect document.padding!
-    // @Incomplete @ToDo: Check if a table is active!
-    return render_text(document, text, font, font_size, alignment, max_width = max_width);
+    assert(!table, "Adding text while rendering is not yet supported. Use add_table_cell() instead.");
+    return render_text(document, text, font, font_size, alignment, min_x = limits.x, max_width = limits.width);
 }
 
-render_text :: (using document: *Document, text: string, text_font: Pdf.Font, text_font_size: float, text_alignment: Pdf.TextAlignment, min_x: float = -1, max_width: float = -1) -> bool {
+render_text :: (using document: *Document, text: string, text_font: Pdf.Font, text_font_size: float, text_alignment: Pdf.TextAlignment, min_x: float, max_width: float) -> bool {
     // log("render_text: \"%\" % %", text, text_font, text_font_size);
     c_text := temp_c_string(text); // @Speed
 
     page := get_current_page(document);
+
+    haru_min_x := page_margins[3] + min_x;
+    render_row_border(page, .{1, .{0,1,0}}, haru_min_x, position.y, haru_min_x + max_width, position.y);
+    line_height := get_line_height(document);
+
     Pdf.Page_BeginText(page);
     Pdf.Page_SetFontAndSize(page, text_font, text_font_size);
     Pdf.Page_SetTextLeading(page, text_font_size * line_height_factor);
     Pdf.Page_MoveTextPos(page, position.x, position.y);
-
-    haru_min_x: float;
-    if min_x < 0 {
-        haru_min_x = page_margins[3];
-    } else {
-        haru_min_x = page_margins[3] + min_x;
-    }
-    haru_width := max_width;
-    if (haru_width < 0) {
-        haru_width = Pdf.Page_GetWidth(page) - page_margins[1] - haru_min_x;
-    }
-
-    line_height := get_line_height(document);
 
     offset := 0;
     success := true;
@@ -389,11 +406,13 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
             Pdf.Page_EndText(page);
             page = add_page(document);
             begin_text_line(document);
+            position.x = haru_min_x;
             Pdf.Page_BeginText(page);
             Pdf.Page_MoveTextPos(page, position.x, position.y);
         }
 
         wanted_end_offset := text.count;
+
         line_end_offset := find_index_from_left(text, #char "\n", offset);
         if line_end_offset >= 0  {
             c_text[line_end_offset] = 0;
@@ -403,7 +422,7 @@ render_text :: (using document: *Document, text: string, text_font: Pdf.Font, te
         line_contains_characters := (line_end_offset < 0 || line_end_offset != offset);
         line_width: float;
         if line_contains_characters {
-            remaining_width := haru_width - (position.x - haru_min_x);
+            remaining_width := max_width - (position.x - haru_min_x);
             line_characters := Pdf.Page_MeasureText(page, c_text + offset, remaining_width, xx word_wrap, *line_width);
             if line_characters == 0 {
                 if position.x == page_margins[3] {
@@ -493,10 +512,7 @@ add_image :: (using document: *Document, image: Pdf.Image, width: float, height:
         }
     }
 
-    end_x := Pdf.Page_GetWidth(page) - page_margins[1];
-    // if position.x + rendered_dimensions.x > end_x {
-    //     position.y -= rendere
-    // }
+    end_x := page_margins[3] + limits.x + limits.width;
 
     if !can_fit_height_on_current_page(document, rendered_dimensions.y) {
         page = add_page(document);
@@ -514,7 +530,7 @@ add_image :: (using document: *Document, image: Pdf.Image, width: float, height:
     }
 
     Pdf.Page_DrawImage(page, image, start_x, position.y - rendered_dimensions.y, rendered_dimensions.x, rendered_dimensions.y);
-    position.x = page_margins[3];
+    position.x = page_margins[3] + limits.x;
     position.y -= rendered_dimensions.y;
     return rendered_dimensions;
 }
@@ -677,67 +693,7 @@ add_table_cell :: (using document: *Document, data: Table.Cell_Content) {
     }
 
     if table.current_row.count == table.columns.count {
-        table.num_rows += 1;
-        if table.num_footer_rows >= 0 table.num_footer_rows += 1;
-
-        y_after_last_row := position.y;
-        if table.last_row  y_after_last_row -= table.last_row[0].height;
-        compute_height(document, table.current_row);
-
-        current_row_fits := (y_after_last_row - table.current_row[0].height >= page_margins[2] + current_page_info.footer_height);
-
-        // Pull the last row onto next page if the first footer row does not fit on the new page so that
-        // the footer is never alone on its own page.
-        render_last_row_on_next_page := table.last_row && !current_row_fits && table.num_footer_rows == 1;
-
-        if table.last_row {
-            if current_row_fits merge_borders(*table.last_row, *table.current_row);
-            if render_last_row_on_next_page {
-                // We need to re-render the row-before-last_row’s bottom border
-                // if it was removed by merge_border because we thought that last_row
-                // will be rendered after it.
-                needs_redraw := false;
-                for * table.second_to_last_row {
-                    if it.merged_borders[2].size != it.style.borders[2].size {
-                        it.merged_borders[2] = it.style.borders[2];
-                        needs_redraw = true;
-                    }
-                }
-                if needs_redraw  render_row(document, table.second_to_last_row, only_bottom_border = true);
-            } else {
-                render_row(document, table.last_row);
-            }
-        }
-
-        if !current_row_fits {
-            add_page(document);
-            row_below_header := ifx render_last_row_on_next_page then *table.last_row else *table.current_row;
-            if table.header {
-                table.header[0].row_start = position;
-                merge_borders(*table.header, row_below_header);
-                render_row(document, table.header);
-            }
-            if render_last_row_on_next_page {
-                table.last_row[0].row_start = position;
-                render_row(document, table.last_row);
-            }
-        }
-
-        table.current_row[0].row_start = position;
-
-        // @Incomplete: What do we do if a row doesn’t fit on the page on its own!?
-        assert(position.y - table.current_row[0].height >= page_margins[2] + current_page_info.footer_height);
-
-        if !table.header {
-            array_copy(*table.header, table.current_row);
-        }
-
-
-        old := table.second_to_last_row;
-        table.second_to_last_row = table.last_row;
-        table.last_row = table.current_row;
-        table.current_row = old;
-        array_reset_keeping_memory(*table.current_row);
+        finish_table_row(document);
     }
 
     document.alignment = table.columns[table.current_row.count].alignment;
@@ -757,6 +713,89 @@ end_table :: (using document: *Document) {
         table.last_row.count = 0;
     }
     free(table);
+    table = null;
+}
+
+check_for_error :: (using pdf_context: Pdf_Context) {
+    if error != Pdf.HPDF_OK {
+        // log_error("Error at % while generating the PDF: 0x% (%)", error_location, formatInt(error, base = 16), error_detail);
+        log_error("Error while generating the PDF: 0x% (%)", formatInt(error, base = 16), error_detail);
+        exit(1);
+    }
+}
+
+check_for_error :: (pdf: Pdf.Doc, loc := #caller_location) {
+    error := Pdf.GetError(pdf);
+    if error != Pdf.HPDF_OK {
+        log_error("Error at % while generating the PDF: 0x% (%)", loc, formatInt(error, base = 16), Pdf.GetErrorDetail(pdf));
+        exit(1);
+    }
+}
+
+#scope_file
+
+finish_table_row :: (using document: *Document) {
+    table.num_rows += 1;
+    if table.num_footer_rows >= 0 table.num_footer_rows += 1;
+
+    y_after_last_row := position.y;
+    if table.last_row  y_after_last_row -= table.last_row[0].height;
+    compute_height(document, table.current_row);
+
+    current_row_fits := (y_after_last_row - table.current_row[0].height >= page_margins[2] + current_page_info.footer_height);
+
+    // Pull the last row onto next page if the first footer row does not fit on the new page so that
+    // the footer is never alone on its own page.
+    render_last_row_on_next_page := table.last_row && !current_row_fits && table.num_footer_rows == 1;
+
+    if table.last_row {
+        if current_row_fits merge_borders(*table.last_row, *table.current_row);
+        if render_last_row_on_next_page {
+            // We need to re-render the row-before-last_row’s bottom border
+            // if it was removed by merge_border because we thought that last_row
+            // will be rendered after it.
+            needs_redraw := false;
+            for * table.second_to_last_row {
+                if it.merged_borders[2].size != it.style.borders[2].size {
+                    it.merged_borders[2] = it.style.borders[2];
+                    needs_redraw = true;
+                }
+            }
+            if needs_redraw  render_row(document, table.second_to_last_row, only_bottom_border = true);
+        } else {
+            render_row(document, table.last_row);
+        }
+    }
+
+    if !current_row_fits {
+        add_page(document);
+        row_below_header := ifx render_last_row_on_next_page then *table.last_row else *table.current_row;
+        if table.header {
+            table.header[0].row_start = position;
+            merge_borders(*table.header, row_below_header);
+            render_row(document, table.header);
+        }
+        if render_last_row_on_next_page {
+            table.last_row[0].row_start = position;
+            render_row(document, table.last_row);
+        }
+    }
+
+    table.current_row[0].row_start = position;
+
+    // @Incomplete: What do we do if a row doesn’t fit on the page on its own!?
+    assert(position.y - table.current_row[0].height >= page_margins[2] + current_page_info.footer_height);
+
+    if !table.header {
+        array_copy(*table.header, table.current_row);
+    }
+
+
+    old := table.second_to_last_row;
+    table.second_to_last_row = table.last_row;
+    table.last_row = table.current_row;
+    table.current_row = old;
+    array_reset_keeping_memory(*table.current_row);
 }
 
 compute_height :: (using document: *Document, row: [] Table.Cell_State) {
@@ -909,22 +948,6 @@ pdf_error_handler :: (error: Pdf.STATUS, detail: Pdf.STATUS, user_data: *void) -
         data.error = error;
         data.error_detail = detail;
         // data.error_location = data.last_location;
-    }
-}
-
-check_for_error :: (using pdf_context: Pdf_Context) {
-    if error != Pdf.HPDF_OK {
-        // log_error("Error at % while generating the PDF: 0x% (%)", error_location, formatInt(error, base = 16), error_detail);
-        log_error("Error while generating the PDF: 0x% (%)", formatInt(error, base = 16), error_detail);
-        exit(1);
-    }
-}
-
-check_for_error :: (pdf: Pdf.Doc, loc := #caller_location) {
-    error := Pdf.GetError(pdf);
-    if error != Pdf.HPDF_OK {
-        log_error("Error at % while generating the PDF: 0x% (%)", loc, formatInt(error, base = 16), Pdf.GetErrorDetail(pdf));
-        exit(1);
     }
 }
 
