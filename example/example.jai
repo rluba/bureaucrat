@@ -183,7 +183,7 @@ main :: () {
 
     // Save the PDF
     Pdf.SaveToFile(pdf.haru_doc, output_path.data);
-	check_for_error(pdf.pdf_context);
+	exit_if_error(pdf.pdf_context);
     log("Created %", output_path);
 }
 

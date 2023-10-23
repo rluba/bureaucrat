@@ -765,21 +765,82 @@ end_table :: (using document: *Document) {
     table = null;
 }
 
-check_for_error :: (using pdf_context: Pdf_Context) {
-    if error != Pdf.HPDF_OK {
-        // log_error("Error at % while generating the PDF: 0x% (%)", error_location, formatInt(error, base = 16), error_detail);
-        log_error("Error while generating the PDF: 0x% (%)", formatInt(error, base = 16), error_detail);
-        exit(1);
+append_to_builder :: (builder: *String_Builder, document: *Document) {
+    Callback_Data :: struct {
+        ctx: Context;
+        builder: *String_Builder;
+        document: *Document;
+    }
+
+    haru_write_to_string_builder :: (stream: Pdf.Stream, ptr: *u8, size: u32) -> Pdf.STATUS #c_call {
+        data := cast(*Callback_Data) stream.attr;
+        push_context data.ctx {
+            to_write := ptr;
+            remaining := size;
+            while remaining {
+                buffer := ensure_contiguous_space_and_return_available_range(data.builder, 128);
+                if !buffer {
+                    log_error("Couldn’t get a buffer that’s big enough for %", size);
+                    error: u64 = Pdf.HPDF_FAILD_TO_ALLOC_MEM;
+                    Pdf.SetError(*data.document.haru_doc.error, error, 0);
+                    return error;
+                }
+
+                amount := Min(remaining, cast(u32) buffer.count);
+                memcpy(buffer.data, to_write, amount);
+                advance_through_ensured_space(data.builder, amount);
+                to_write += amount;
+                remaining -= amount;
+            }
+            return Pdf.HPDF_OK;
+        }
+    }
+
+    data: Callback_Data;
+    data.ctx = context;
+    data.builder = builder;
+    data.document = document;
+    callback_writer := Pdf.CallbackWriter_New(document.haru_doc.mmgr, haru_write_to_string_builder, *data);
+    defer Pdf.Stream_Free(callback_writer);
+
+
+    old_stream := document.haru_doc.stream;
+    document.haru_doc.stream = callback_writer;
+    defer document.haru_doc.stream = old_stream;
+
+    result := Pdf.SaveToStream(document.haru_doc);
+    if result != Pdf.HPDF_OK {
+        document.pdf_context.error = result;
     }
 }
 
-check_for_error :: (pdf: Pdf.Doc, loc := #caller_location) {
+exit_if_error :: (using pdf_context: Pdf_Context) {
+    if !check_for_error(pdf_context) exit(1);
+}
+
+exit_if_error :: (pdf: Pdf.Doc, loc := #caller_location) {
+    if !check_for_error(pdf, loc) exit(1);
+}
+
+check_for_error :: (using pdf_context: Pdf_Context) -> success: bool {
+    if error != Pdf.HPDF_OK {
+        // log_error("Error at % while generating the PDF: 0x% (%)", error_location, formatInt(error, base = 16), error_detail);
+        log_error("Error while generating the PDF: 0x% (%)", formatInt(error, base = 16), error_detail);
+        return false;
+    }
+
+    return true;
+}
+
+check_for_error :: (pdf: Pdf.Doc, loc := #caller_location) -> bool {
     error := Pdf.GetError(pdf);
     if error != Pdf.HPDF_OK {
         log_error("Error at % while generating the PDF: 0x% (%)", loc, formatInt(error, base = 16), Pdf.GetErrorDetail(pdf));
-        exit(1);
+        return false;
     }
+    return true;
 }
+
 
 #scope_file
 

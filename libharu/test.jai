@@ -56,7 +56,7 @@ main :: () {
 
     // Save the PDF
     Pdf.SaveToFile(pdf, "test.pdf");
-	check_for_error(pdf_context);
+	exit_if_error(pdf_context);
 }
 
 Pdf_Context :: struct {
@@ -76,7 +76,7 @@ pdf_error_handler :: (error: Pdf.STATUS, detail: Pdf.STATUS, user_data: *void) -
 	}
 }
 
-check_for_error :: (using pdf_context: Pdf_Context) {
+exit_if_error :: (using pdf_context: Pdf_Context) {
 	if error != Pdf.HPDF_OK {
 		// log_error("Error at % while generating the PDF: 0x% (%)", error_location, formatInt(error, base = 16), error_detail);
 		log_error("Error while generating the PDF: 0x% (%)", formatInt(error, base = 16), error_detail);
@@ -84,7 +84,7 @@ check_for_error :: (using pdf_context: Pdf_Context) {
 	}
 }
 
-check_for_error :: (pdf: Pdf.Doc, loc := #caller_location) {
+exit_if_error :: (pdf: Pdf.Doc, loc := #caller_location) {
 	error := Pdf.GetError(pdf);
 	if error != Pdf.HPDF_OK {
 		log_error("Error at % while generating the PDF: 0x% (%)", loc, formatInt(error, base = 16), Pdf.GetErrorDetail(pdf));

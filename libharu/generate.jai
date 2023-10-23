@@ -1,7 +1,7 @@
 AT_COMPILE_TIME :: true;
 
-COMPILE       :: false; // Enable to compile the libharu library from source before generating bindings.
-// COMPILE_DEBUG :: false; // Compile a debug or release version of libharu?
+COMPILE       :: true; // Enable to compile the libharu library from source before generating bindings.
+COMPILE_DEBUG :: true; // Compile a debug or release version of libharu? @ToDo: DOESN’T WORK – at least on macOS. I don’t know why and I’m currently too tired to investigate.
 
 LIBHARU_PATH :: "libharu_source";
 
@@ -106,6 +106,10 @@ build_libharu :: () -> bool {
         tprint("-DCMAKE_INSTALL_PREFIX=%", absolute_install_dir),
         tprint("-DCMAKE_PREFIX_PATH=%",    install_dir),
 	);
+
+    if COMPILE_DEBUG {
+        array_add(*config_command, "-DCMAKE_BUILD_TYPE=Debug", "-DLIBHPDF_DEBUG=ON");
+    }
 
     #if OS == .MACOS {
         using options := get_build_options();
