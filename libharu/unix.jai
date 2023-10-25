@@ -1,7 +1,7 @@
 //
 // This file was auto-generated using the following command:
 //
-// jai libharu/generate.jai
+// jai generate.jai
 //
 
 
@@ -52,19 +52,23 @@ HPDF_BS_DEF_WIDTH :: 1;
 HPDF_DEF_PAGE_WIDTH :: 595.276;
 HPDF_DEF_PAGE_HEIGHT :: 841.89;
 
-HPDF_COMP_NONE :: 0x00;
-HPDF_COMP_TEXT :: 0x01;
-HPDF_COMP_IMAGE :: 0x02;
-HPDF_COMP_METADATA :: 0x04;
-HPDF_COMP_ALL :: 0x0F;
+COMP :: enum_flags {
+    NONE     :: 0x00;
+    TEXT     :: 0x01;
+    IMAGE    :: 0x02;
+    METADATA :: 0x04;
+    ALL      :: 0x0F;
 
-HPDF_COMP_MASK :: 0xFF;
+    MASK     :: 0xFF;
+}
 
-HPDF_ENABLE_READ :: 0;
-HPDF_ENABLE_PRINT :: 4;
-HPDF_ENABLE_EDIT_ALL :: 8;
-HPDF_ENABLE_COPY :: 16;
-HPDF_ENABLE_EDIT :: 32;
+ENABLE :: enum_flags {
+    READ     :: 0;
+    PRINT    :: 4;
+    EDIT_ALL :: 8;
+    COPY     :: 16;
+    EDIT     :: 32;
+}
 
 HPDF_HIDE_TOOLBAR :: 1;
 HPDF_HIDE_MENUBAR :: 2;
@@ -114,13 +118,15 @@ HPDF_MAX_DASH_PATTERN :: 100;
 
 HPDF_MAX_JWW_NUM :: 128;
 
-HPDF_GMODE_PAGE_DESCRIPTION :: 0x0001;
-HPDF_GMODE_PATH_OBJECT :: 0x0002;
-HPDF_GMODE_TEXT_OBJECT :: 0x0004;
-HPDF_GMODE_CLIPPING_PATH :: 0x0008;
-HPDF_GMODE_SHADING :: 0x0010;
-HPDF_GMODE_INLINE_IMAGE :: 0x0020;
-HPDF_GMODE_EXTERNAL_OBJECT :: 0x0040;
+GMODE :: enum_flags {
+    PAGE_DESCRIPTION :: 0x0001;
+    PATH_OBJECT      :: 0x0002;
+    TEXT_OBJECT      :: 0x0004;
+    CLIPPING_PATH    :: 0x0008;
+    SHADING          :: 0x0010;
+    INLINE_IMAGE     :: 0x0020;
+    EXTERNAL_OBJECT  :: 0x0040;
+}
 
 HPDF_SIG_BYTES :: 0x41504446;
 
@@ -255,12 +261,14 @@ HPDF_ARC4_BUF_SIZE :: 256;
 
 HPDF_STREAM_SIG_BYTES :: 0x5354524D;
 
-HPDF_STREAM_FILTER_NONE :: 0x0000;
-HPDF_STREAM_FILTER_ASCIIHEX :: 0x0100;
-HPDF_STREAM_FILTER_ASCII85 :: 0x0200;
-HPDF_STREAM_FILTER_FLATE_DECODE :: 0x0400;
-HPDF_STREAM_FILTER_DCT_DECODE :: 0x0800;
-HPDF_STREAM_FILTER_CCITT_DECODE :: 0x1000;
+STREAM_FILTER :: enum_flags {
+    NONE         :: 0x0000;
+    ASCIIHEX     :: 0x0100;
+    ASCII85      :: 0x0200;
+    FLATE_DECODE :: 0x0400;
+    DCT_DECODE   :: 0x0800;
+    CCITT_DECODE :: 0x1000;
+}
 
 HPDF_ENCODER_SIG_BYTES :: 0x454E4344;
 
@@ -295,40 +303,46 @@ HPDF_ENCODING_KOI8_R :: "KOI8-R";
 
 char_NOTDEF :: ".notdef";
 
-HPDF_OTYPE_NONE :: 0x00000000;
-HPDF_OTYPE_DIRECT :: 0x80000000;
-HPDF_OTYPE_INDIRECT :: 0x40000000;
-HPDF_OTYPE_ANY :: HPDF_OTYPE_DIRECT | HPDF_OTYPE_INDIRECT;
-HPDF_OTYPE_HIDDEN :: 0x10000000;
+OTYPE :: enum_flags {
+    NONE     :: 0x00000000;
+    DIRECT   :: 0x80000000;
+    INDIRECT :: 0x40000000;
+    ANY      :: DIRECT | INDIRECT;
+    HIDDEN   :: 0x10000000;
+}
 
-HPDF_OCLASS_UNKNOWN :: 0x0001;
-HPDF_OCLASS_NULL :: 0x0002;
-HPDF_OCLASS_BOOLEAN :: 0x0003;
-HPDF_OCLASS_NUMBER :: 0x0004;
-HPDF_OCLASS_REAL :: 0x0005;
-HPDF_OCLASS_NAME :: 0x0006;
-HPDF_OCLASS_STRING :: 0x0007;
-HPDF_OCLASS_BINARY :: 0x0008;
-HPDF_OCLASS_ARRAY :: 0x0010;
-HPDF_OCLASS_DICT :: 0x0011;
-HPDF_OCLASS_PROXY :: 0x0012;
-HPDF_OCLASS_DIRECT :: 0x00A0;
-HPDF_OCLASS_ANY :: 0x00FF;
+OCLASS :: enum {
+    UNKNOWN :: 0x0001;
+    NULL    :: 0x0002;
+    BOOLEAN :: 0x0003;
+    NUMBER  :: 0x0004;
+    REAL    :: 0x0005;
+    NAME    :: 0x0006;
+    STRING  :: 0x0007;
+    BINARY  :: 0x0008;
+    ARRAY   :: 0x0010;
+    DICT    :: 0x0011;
+    PROXY   :: 0x0012;
+    DIRECT  :: 0x00A0;
+    ANY     :: 0x00FF;
+}
 
-HPDF_OSUBCLASS_FONT :: 0x0100;
-HPDF_OSUBCLASS_CATALOG :: 0x0200;
-HPDF_OSUBCLASS_PAGES :: 0x0300;
-HPDF_OSUBCLASS_PAGE :: 0x0400;
-HPDF_OSUBCLASS_XOBJECT :: 0x0500;
-HPDF_OSUBCLASS_OUTLINE :: 0x0600;
-HPDF_OSUBCLASS_DESTINATION :: 0x0700;
-HPDF_OSUBCLASS_ANNOTATION :: 0x0800;
-HPDF_OSUBCLASS_ENCRYPT :: 0x0900;
-HPDF_OSUBCLASS_EXT_GSTATE :: 0x0A00;
-HPDF_OSUBCLASS_EXT_GSTATE_R :: 0x0B00;
-HPDF_OSUBCLASS_NAMEDICT :: 0x0C00;
-HPDF_OSUBCLASS_NAMETREE :: 0x0D00;
-HPDF_OSUBCLASS_SHADING :: 0x0E00;
+OSUBCLASS :: enum {
+    FONT         :: 0x0100;
+    CATALOG      :: 0x0200;
+    PAGES        :: 0x0300;
+    PAGE         :: 0x0400;
+    XOBJECT      :: 0x0500;
+    OUTLINE      :: 0x0600;
+    DESTINATION  :: 0x0700;
+    ANNOTATION   :: 0x0800;
+    ENCRYPT      :: 0x0900;
+    EXT_GSTATE   :: 0x0A00;
+    EXT_GSTATE_R :: 0x0B00;
+    NAMEDICT     :: 0x0C00;
+    NAMETREE     :: 0x0D00;
+    SHADING      :: 0x0E00;
+}
 
 HPDF_FONTDEF_SIG_BYTES :: 0x464F4E54;
 
@@ -449,28 +463,12 @@ InfoType :: enum u32 {
     TRAPPED       :: 8;
     GTS_PDFX      :: 9;
     EOF           :: 10;
-
-    HPDF_INFO_CREATION_DATE :: CREATION_DATE;
-    HPDF_INFO_MOD_DATE      :: MOD_DATE;
-
-    HPDF_INFO_AUTHOR        :: AUTHOR;
-    HPDF_INFO_CREATOR       :: CREATOR;
-    HPDF_INFO_PRODUCER      :: PRODUCER;
-    HPDF_INFO_TITLE         :: TITLE;
-    HPDF_INFO_SUBJECT       :: SUBJECT;
-    HPDF_INFO_KEYWORDS      :: KEYWORDS;
-    HPDF_INFO_TRAPPED       :: TRAPPED;
-    HPDF_INFO_GTS_PDFX      :: GTS_PDFX;
-    HPDF_INFO_EOF           :: EOF;
 }
 
 /* PDF-A Types */
 _HPDF_PDFA_TYPE :: enum u32 {
     _1A :: 0;
     _1B :: 1;
-
-    HPDF_PDFA_1A :: _1A;
-    HPDF_PDFA_1B :: _1B;
 }
 
 /* PDF-A Types */
@@ -484,14 +482,6 @@ _HPDF_PdfVer :: enum u32 {
     _16 :: 4;
     _17 :: 5;
     EOF :: 6;
-
-    HPDF_VER_12  :: _12;
-    HPDF_VER_13  :: _13;
-    HPDF_VER_14  :: _14;
-    HPDF_VER_15  :: _15;
-    HPDF_VER_16  :: _16;
-    HPDF_VER_17  :: _17;
-    HPDF_VER_EOF :: EOF;
 }
 
 PDFVer :: _HPDF_PdfVer;
@@ -499,9 +489,6 @@ PDFVer :: _HPDF_PdfVer;
 EncryptMode :: enum u32 {
     R2 :: 2;
     R3 :: 3;
-
-    HPDF_ENCRYPT_R2 :: R2;
-    HPDF_ENCRYPT_R3 :: R3;
 }
 
 Error_Handler :: #type (error_no: STATUS, detail_no: STATUS, user_data: *void) -> void #c_call;
@@ -573,19 +560,6 @@ ColorSpace :: enum u32 {
     INDEXED     :: 9;
     PATTERN     :: 10;
     EOF         :: 11;
-
-    HPDF_CS_DEVICE_GRAY :: DEVICE_GRAY;
-    HPDF_CS_DEVICE_RGB  :: DEVICE_RGB;
-    HPDF_CS_DEVICE_CMYK :: DEVICE_CMYK;
-    HPDF_CS_CAL_GRAY    :: CAL_GRAY;
-    HPDF_CS_CAL_RGB     :: CAL_RGB;
-    HPDF_CS_LAB         :: LAB;
-    HPDF_CS_ICC_BASED   :: ICC_BASED;
-    HPDF_CS_SEPARATION  :: SEPARATION;
-    HPDF_CS_DEVICE_N    :: DEVICE_N;
-    HPDF_CS_INDEXED     :: INDEXED;
-    HPDF_CS_PATTERN     :: PATTERN;
-    HPDF_CS_EOF         :: EOF;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -612,11 +586,6 @@ LineCap :: enum u32 {
     ROUND_END             :: 1;
     PROJECTING_SQUARE_END :: 2;
     LINECAP_EOF           :: 3;
-
-    HPDF_BUTT_END              :: BUTT_END;
-    HPDF_ROUND_END             :: ROUND_END;
-    HPDF_PROJECTING_SQUARE_END :: PROJECTING_SQUARE_END;
-    HPDF_LINECAP_EOF           :: LINECAP_EOF;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -626,11 +595,6 @@ LineJoin :: enum u32 {
     ROUND_JOIN   :: 1;
     BEVEL_JOIN   :: 2;
     LINEJOIN_EOF :: 3;
-
-    HPDF_MITER_JOIN   :: MITER_JOIN;
-    HPDF_ROUND_JOIN   :: ROUND_JOIN;
-    HPDF_BEVEL_JOIN   :: BEVEL_JOIN;
-    HPDF_LINEJOIN_EOF :: LINEJOIN_EOF;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -645,26 +609,12 @@ TextRenderingMode :: enum u32 {
     FILL_STROKE_CLIPPING :: 6;
     CLIPPING             :: 7;
     RENDERING_MODE_EOF   :: 8;
-
-    HPDF_FILL                 :: FILL;
-    HPDF_STROKE               :: STROKE;
-    HPDF_FILL_THEN_STROKE     :: FILL_THEN_STROKE;
-    HPDF_INVISIBLE            :: INVISIBLE;
-    HPDF_FILL_CLIPPING        :: FILL_CLIPPING;
-    HPDF_STROKE_CLIPPING      :: STROKE_CLIPPING;
-    HPDF_FILL_STROKE_CLIPPING :: FILL_STROKE_CLIPPING;
-    HPDF_CLIPPING             :: CLIPPING;
-    HPDF_RENDERING_MODE_EOF   :: RENDERING_MODE_EOF;
 }
 
 WritingMode :: enum u32 {
     HORIZONTAL :: 0;
     VERTICAL   :: 1;
     EOF        :: 2;
-
-    HPDF_WMODE_HORIZONTAL :: HORIZONTAL;
-    HPDF_WMODE_VERTICAL   :: VERTICAL;
-    HPDF_WMODE_EOF        :: EOF;
 }
 
 PageLayout :: enum u32 {
@@ -675,14 +625,6 @@ PageLayout :: enum u32 {
     TWO_PAGE_LEFT    :: 4;
     TWO_PAGE_RIGHT   :: 5;
     EOF              :: 6;
-
-    HPDF_PAGE_LAYOUT_SINGLE           :: SINGLE;
-    HPDF_PAGE_LAYOUT_ONE_COLUMN       :: ONE_COLUMN;
-    HPDF_PAGE_LAYOUT_TWO_COLUMN_LEFT  :: TWO_COLUMN_LEFT;
-    HPDF_PAGE_LAYOUT_TWO_COLUMN_RIGHT :: TWO_COLUMN_RIGHT;
-    HPDF_PAGE_LAYOUT_TWO_PAGE_LEFT    :: TWO_PAGE_LEFT;
-    HPDF_PAGE_LAYOUT_TWO_PAGE_RIGHT   :: TWO_PAGE_RIGHT;
-    HPDF_PAGE_LAYOUT_EOF              :: EOF;
 }
 
 PageMode :: enum u32 {
@@ -692,13 +634,6 @@ PageMode :: enum u32 {
     FULL_SCREEN :: 3;
 
     EOF         :: 4;
-
-    HPDF_PAGE_MODE_USE_NONE    :: USE_NONE;
-    HPDF_PAGE_MODE_USE_OUTLINE :: USE_OUTLINE;
-    HPDF_PAGE_MODE_USE_THUMBS  :: USE_THUMBS;
-    HPDF_PAGE_MODE_FULL_SCREEN :: FULL_SCREEN;
-
-    HPDF_PAGE_MODE_EOF         :: EOF;
 }
 
 PageNumStyle :: enum u32 {
@@ -708,13 +643,6 @@ PageNumStyle :: enum u32 {
     UPPER_LETTERS :: 3;
     LOWER_LETTERS :: 4;
     EOF           :: 5;
-
-    HPDF_PAGE_NUM_STYLE_DECIMAL       :: DECIMAL;
-    HPDF_PAGE_NUM_STYLE_UPPER_ROMAN   :: UPPER_ROMAN;
-    HPDF_PAGE_NUM_STYLE_LOWER_ROMAN   :: LOWER_ROMAN;
-    HPDF_PAGE_NUM_STYLE_UPPER_LETTERS :: UPPER_LETTERS;
-    HPDF_PAGE_NUM_STYLE_LOWER_LETTERS :: LOWER_LETTERS;
-    HPDF_PAGE_NUM_STYLE_EOF           :: EOF;
 }
 
 DestinationType :: enum u32 {
@@ -727,16 +655,6 @@ DestinationType :: enum u32 {
     FIT_BH  :: 6;
     FIT_BV  :: 7;
     DST_EOF :: 8;
-
-    HPDF_XYZ     :: XYZ;
-    HPDF_FIT     :: FIT;
-    HPDF_FIT_H   :: FIT_H;
-    HPDF_FIT_V   :: FIT_V;
-    HPDF_FIT_R   :: FIT_R;
-    HPDF_FIT_B   :: FIT_B;
-    HPDF_FIT_BH  :: FIT_BH;
-    HPDF_FIT_BV  :: FIT_BV;
-    HPDF_DST_EOF :: DST_EOF;
 }
 
 AnnotType :: enum u32 {
@@ -758,25 +676,6 @@ AnnotType :: enum u32 {
     LINE            :: 15;
     PROJECTION      :: 16;
     WIDGET          :: 17;
-
-    HPDF_ANNOT_TEXT_NOTES      :: TEXT_NOTES;
-    HPDF_ANNOT_LINK            :: LINK;
-    HPDF_ANNOT_SOUND           :: SOUND;
-    HPDF_ANNOT_FREE_TEXT       :: FREE_TEXT;
-    HPDF_ANNOT_STAMP           :: STAMP;
-    HPDF_ANNOT_SQUARE          :: SQUARE;
-    HPDF_ANNOT_CIRCLE          :: CIRCLE;
-    HPDF_ANNOT_STRIKE_OUT      :: STRIKE_OUT;
-    HPDF_ANNOT_HIGHTLIGHT      :: HIGHTLIGHT;
-    HPDF_ANNOT_UNDERLINE       :: UNDERLINE;
-    HPDF_ANNOT_INK             :: INK;
-    HPDF_ANNOT_FILE_ATTACHMENT :: FILE_ATTACHMENT;
-    HPDF_ANNOT_POPUP           :: POPUP;
-    HPDF_ANNOT_3D              :: _3D;
-    HPDF_ANNOT_SQUIGGLY        :: SQUIGGLY;
-    HPDF_ANNOT_LINE            :: LINE;
-    HPDF_ANNOT_PROJECTION      :: PROJECTION;
-    HPDF_ANNOT_WIDGET          :: WIDGET;
 }
 
 AnnotFlgs :: enum u32 {
@@ -787,14 +686,6 @@ AnnotFlgs :: enum u32 {
     NOROTATE  :: 4;
     NOVIEW    :: 5;
     READONLY  :: 6;
-
-    HPDF_ANNOT_INVISIBLE :: INVISIBLE;
-    HPDF_ANNOT_HIDDEN    :: HIDDEN;
-    HPDF_ANNOT_PRINT     :: PRINT;
-    HPDF_ANNOT_NOZOOM    :: NOZOOM;
-    HPDF_ANNOT_NOROTATE  :: NOROTATE;
-    HPDF_ANNOT_NOVIEW    :: NOVIEW;
-    HPDF_ANNOT_READONLY  :: READONLY;
 }
 
 AnnotHighlightMode :: enum u32 {
@@ -803,12 +694,6 @@ AnnotHighlightMode :: enum u32 {
     INVERT_BORDER       :: 2;
     DOWN_APPEARANCE     :: 3;
     HIGHTLIGHT_MODE_EOF :: 4;
-
-    HPDF_ANNOT_NO_HIGHTLIGHT       :: NO_HIGHTLIGHT;
-    HPDF_ANNOT_INVERT_BOX          :: INVERT_BOX;
-    HPDF_ANNOT_INVERT_BORDER       :: INVERT_BORDER;
-    HPDF_ANNOT_DOWN_APPEARANCE     :: DOWN_APPEARANCE;
-    HPDF_ANNOT_HIGHTLIGHT_MODE_EOF :: HIGHTLIGHT_MODE_EOF;
 }
 
 AnnotIcon :: enum u32 {
@@ -820,15 +705,6 @@ AnnotIcon :: enum u32 {
     PARAGRAPH     :: 5;
     INSERT        :: 6;
     EOF           :: 7;
-
-    HPDF_ANNOT_ICON_COMMENT       :: COMMENT;
-    HPDF_ANNOT_ICON_KEY           :: KEY;
-    HPDF_ANNOT_ICON_NOTE          :: NOTE;
-    HPDF_ANNOT_ICON_HELP          :: HELP;
-    HPDF_ANNOT_ICON_NEW_PARAGRAPH :: NEW_PARAGRAPH;
-    HPDF_ANNOT_ICON_PARAGRAPH     :: PARAGRAPH;
-    HPDF_ANNOT_ICON_INSERT        :: INSERT;
-    HPDF_ANNOT_ICON_EOF           :: EOF;
 }
 
 AnnotIntent :: enum u32 {
@@ -839,14 +715,6 @@ AnnotIntent :: enum u32 {
     POLYGONCLOUD       :: 4;
     POLYLINEDIMENSION  :: 5;
     POLYGONDIMENSION   :: 6;
-
-    HPDF_ANNOT_INTENT_FREETEXTCALLOUT    :: FREETEXTCALLOUT;
-    HPDF_ANNOT_INTENT_FREETEXTTYPEWRITER :: FREETEXTTYPEWRITER;
-    HPDF_ANNOT_INTENT_LINEARROW          :: LINEARROW;
-    HPDF_ANNOT_INTENT_LINEDIMENSION      :: LINEDIMENSION;
-    HPDF_ANNOT_INTENT_POLYGONCLOUD       :: POLYGONCLOUD;
-    HPDF_ANNOT_INTENT_POLYLINEDIMENSION  :: POLYLINEDIMENSION;
-    HPDF_ANNOT_INTENT_POLYGONDIMENSION   :: POLYGONDIMENSION;
 }
 
 LineAnnotEndingStyle :: enum u32 {
@@ -860,25 +728,11 @@ LineAnnotEndingStyle :: enum u32 {
     ROPENARROW   :: 7;
     RCLOSEDARROW :: 8;
     SLASH        :: 9;
-
-    HPDF_LINE_ANNOT_NONE         :: NONE;
-    HPDF_LINE_ANNOT_SQUARE       :: SQUARE;
-    HPDF_LINE_ANNOT_CIRCLE       :: CIRCLE;
-    HPDF_LINE_ANNOT_DIAMOND      :: DIAMOND;
-    HPDF_LINE_ANNOT_OPENARROW    :: OPENARROW;
-    HPDF_LINE_ANNOT_CLOSEDARROW  :: CLOSEDARROW;
-    HPDF_LINE_ANNOT_BUTT         :: BUTT;
-    HPDF_LINE_ANNOT_ROPENARROW   :: ROPENARROW;
-    HPDF_LINE_ANNOT_RCLOSEDARROW :: RCLOSEDARROW;
-    HPDF_LINE_ANNOT_SLASH        :: SLASH;
 }
 
 LineAnnotCapPosition :: enum u32 {
     INLINE :: 0;
     TOP    :: 1;
-
-    HPDF_LINE_ANNOT_CAP_INLINE :: INLINE;
-    HPDF_LINE_ANNOT_CAP_TOP    :: TOP;
 }
 
 StampAnnotName :: enum u32 {
@@ -896,21 +750,6 @@ StampAnnotName :: enum u32 {
     TOPSECRET           :: 11;
     DRAFT               :: 12;
     FORPUBLICRELEASE    :: 13;
-
-    HPDF_STAMP_ANNOT_APPROVED            :: APPROVED;
-    HPDF_STAMP_ANNOT_EXPERIMENTAL        :: EXPERIMENTAL;
-    HPDF_STAMP_ANNOT_NOTAPPROVED         :: NOTAPPROVED;
-    HPDF_STAMP_ANNOT_ASIS                :: ASIS;
-    HPDF_STAMP_ANNOT_EXPIRED             :: EXPIRED;
-    HPDF_STAMP_ANNOT_NOTFORPUBLICRELEASE :: NOTFORPUBLICRELEASE;
-    HPDF_STAMP_ANNOT_CONFIDENTIAL        :: CONFIDENTIAL;
-    HPDF_STAMP_ANNOT_FINAL               :: FINAL;
-    HPDF_STAMP_ANNOT_SOLD                :: SOLD;
-    HPDF_STAMP_ANNOT_DEPARTMENTAL        :: DEPARTMENTAL;
-    HPDF_STAMP_ANNOT_FORCOMMENT          :: FORCOMMENT;
-    HPDF_STAMP_ANNOT_TOPSECRET           :: TOPSECRET;
-    HPDF_STAMP_ANNOT_DRAFT               :: DRAFT;
-    HPDF_STAMP_ANNOT_FORPUBLICRELEASE    :: FORPUBLICRELEASE;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -921,12 +760,6 @@ BSSubtype :: enum u32 {
     BEVELED    :: 2;
     INSET      :: 3;
     UNDERLINED :: 4;
-
-    HPDF_BS_SOLID      :: SOLID;
-    HPDF_BS_DASHED     :: DASHED;
-    HPDF_BS_BEVELED    :: BEVELED;
-    HPDF_BS_INSET      :: INSET;
-    HPDF_BS_UNDERLINED :: UNDERLINED;
 }
 
 /*----- blend modes ----------------------------------------------------------*/
@@ -944,20 +777,6 @@ BlendMode :: enum u32 {
     DIFFERENCE  :: 10;
     EXCLUSHON   :: 11;
     EOF         :: 12;
-
-    HPDF_BM_NORMAL      :: NORMAL;
-    HPDF_BM_MULTIPLY    :: MULTIPLY;
-    HPDF_BM_SCREEN      :: SCREEN;
-    HPDF_BM_OVERLAY     :: OVERLAY;
-    HPDF_BM_DARKEN      :: DARKEN;
-    HPDF_BM_LIGHTEN     :: LIGHTEN;
-    HPDF_BM_COLOR_DODGE :: COLOR_DODGE;
-    HPDF_BM_COLOR_BUM   :: COLOR_BUM;
-    HPDF_BM_HARD_LIGHT  :: HARD_LIGHT;
-    HPDF_BM_SOFT_LIGHT  :: SOFT_LIGHT;
-    HPDF_BM_DIFFERENCE  :: DIFFERENCE;
-    HPDF_BM_EXCLUSHON   :: EXCLUSHON;
-    HPDF_BM_EOF         :: EOF;
 }
 
 /*----- slide show -----------------------------------------------------------*/
@@ -980,25 +799,6 @@ TransitionStyle :: enum u32 {
     GLITTER_TOP_LEFT_TO_BOTTOM_RIGHT :: 15;
     REPLACE                          :: 16;
     EOF                              :: 17;
-
-    HPDF_TS_WIPE_RIGHT                       :: WIPE_RIGHT;
-    HPDF_TS_WIPE_UP                          :: WIPE_UP;
-    HPDF_TS_WIPE_LEFT                        :: WIPE_LEFT;
-    HPDF_TS_WIPE_DOWN                        :: WIPE_DOWN;
-    HPDF_TS_BARN_DOORS_HORIZONTAL_OUT        :: BARN_DOORS_HORIZONTAL_OUT;
-    HPDF_TS_BARN_DOORS_HORIZONTAL_IN         :: BARN_DOORS_HORIZONTAL_IN;
-    HPDF_TS_BARN_DOORS_VERTICAL_OUT          :: BARN_DOORS_VERTICAL_OUT;
-    HPDF_TS_BARN_DOORS_VERTICAL_IN           :: BARN_DOORS_VERTICAL_IN;
-    HPDF_TS_BOX_OUT                          :: BOX_OUT;
-    HPDF_TS_BOX_IN                           :: BOX_IN;
-    HPDF_TS_BLINDS_HORIZONTAL                :: BLINDS_HORIZONTAL;
-    HPDF_TS_BLINDS_VERTICAL                  :: BLINDS_VERTICAL;
-    HPDF_TS_DISSOLVE                         :: DISSOLVE;
-    HPDF_TS_GLITTER_RIGHT                    :: GLITTER_RIGHT;
-    HPDF_TS_GLITTER_DOWN                     :: GLITTER_DOWN;
-    HPDF_TS_GLITTER_TOP_LEFT_TO_BOTTOM_RIGHT :: GLITTER_TOP_LEFT_TO_BOTTOM_RIGHT;
-    HPDF_TS_REPLACE                          :: REPLACE;
-    HPDF_TS_EOF                              :: EOF;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1016,28 +816,11 @@ PageSizes :: enum u32 {
     US5x7     :: 10;
     COMM10    :: 11;
     EOF       :: 12;
-
-    HPDF_PAGE_SIZE_LETTER    :: LETTER;
-    HPDF_PAGE_SIZE_LEGAL     :: LEGAL;
-    HPDF_PAGE_SIZE_A3        :: A3;
-    HPDF_PAGE_SIZE_A4        :: A4;
-    HPDF_PAGE_SIZE_A5        :: A5;
-    HPDF_PAGE_SIZE_B4        :: B4;
-    HPDF_PAGE_SIZE_B5        :: B5;
-    HPDF_PAGE_SIZE_EXECUTIVE :: EXECUTIVE;
-    HPDF_PAGE_SIZE_US4x6     :: US4x6;
-    HPDF_PAGE_SIZE_US4x8     :: US4x8;
-    HPDF_PAGE_SIZE_US5x7     :: US5x7;
-    HPDF_PAGE_SIZE_COMM10    :: COMM10;
-    HPDF_PAGE_SIZE_EOF       :: EOF;
 }
 
 PageDirection :: enum u32 {
     PORTRAIT  :: 0;
     LANDSCAPE :: 1;
-
-    HPDF_PAGE_PORTRAIT  :: PORTRAIT;
-    HPDF_PAGE_LANDSCAPE :: LANDSCAPE;
 }
 
 EncoderType :: enum u32 {
@@ -1045,11 +828,6 @@ EncoderType :: enum u32 {
     TYPE_DOUBLE_BYTE   :: 1;
     TYPE_UNINITIALIZED :: 2;
     UNKNOWN            :: 3;
-
-    HPDF_ENCODER_TYPE_SINGLE_BYTE   :: TYPE_SINGLE_BYTE;
-    HPDF_ENCODER_TYPE_DOUBLE_BYTE   :: TYPE_DOUBLE_BYTE;
-    HPDF_ENCODER_TYPE_UNINITIALIZED :: TYPE_UNINITIALIZED;
-    HPDF_ENCODER_UNKNOWN            :: UNKNOWN;
 }
 
 ByteType :: enum u32 {
@@ -1057,11 +835,6 @@ ByteType :: enum u32 {
     LEAD    :: 1;
     TRAIL   :: 2;
     UNKNOWN :: 3;
-
-    HPDF_BYTE_TYPE_SINGLE  :: SINGLE;
-    HPDF_BYTE_TYPE_LEAD    :: LEAD;
-    HPDF_BYTE_TYPE_TRAIL   :: TRAIL;
-    HPDF_BYTE_TYPE_UNKNOWN :: UNKNOWN;
 }
 
 TextAlignment :: enum u32 {
@@ -1069,20 +842,12 @@ TextAlignment :: enum u32 {
     RIGHT   :: 1;
     CENTER  :: 2;
     JUSTIFY :: 3;
-
-    HPDF_TALIGN_LEFT    :: LEFT;
-    HPDF_TALIGN_RIGHT   :: RIGHT;
-    HPDF_TALIGN_CENTER  :: CENTER;
-    HPDF_TALIGN_JUSTIFY :: JUSTIFY;
 }
 
 /* Name Dictionary values -- see PDF reference section 7.7.4 */
 NameDictKey :: enum u32 {
     EMBEDDED_FILES :: 0;
     EOF            :: 1;
-
-    HPDF_NAME_EMBEDDED_FILES :: EMBEDDED_FILES;
-    HPDF_NAME_EOF            :: EOF;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1092,28 +857,17 @@ PageBoundary :: enum u32 {
     BLEEDBOX :: 2;
     TRIMBOX  :: 3;
     ARTBOX   :: 4;
-
-    HPDF_PAGE_MEDIABOX :: MEDIABOX;
-    HPDF_PAGE_CROPBOX  :: CROPBOX;
-    HPDF_PAGE_BLEEDBOX :: BLEEDBOX;
-    HPDF_PAGE_TRIMBOX  :: TRIMBOX;
-    HPDF_PAGE_ARTBOX   :: ARTBOX;
 }
 
 /*----------------------------------------------------------------------------*/
 ShadingType :: enum u32 {
     SHADING_FREE_FORM_TRIANGLE_MESH :: 4;
-    HPDF_SHADING_FREE_FORM_TRIANGLE_MESH :: SHADING_FREE_FORM_TRIANGLE_MESH;
 }
 
 Shading_FreeFormTriangleMeshEdgeFlag :: enum u32 {
     NO_CONNECTION :: 0;
     BC            :: 1;
     AC            :: 2;
-
-    HPDF_FREE_FORM_TRI_MESH_EDGEFLAG_NO_CONNECTION :: NO_CONNECTION;
-    HPDF_FREE_FORM_TRI_MESH_EDGEFLAG_BC            :: BC;
-    HPDF_FREE_FORM_TRI_MESH_EDGEFLAG_AC            :: AC;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1275,21 +1029,12 @@ StreamType :: enum u32 {
     CALLBACK :: 1;
     FILE     :: 2;
     MEMORY   :: 3;
-
-    HPDF_STREAM_UNKNOWN  :: UNKNOWN;
-    HPDF_STREAM_CALLBACK :: CALLBACK;
-    HPDF_STREAM_FILE     :: FILE;
-    HPDF_STREAM_MEMORY   :: MEMORY;
 }
 
 WhenceMode :: enum u32 {
     SET :: 0;
     CUR :: 1;
     END :: 2;
-
-    HPDF_SEEK_SET :: SET;
-    HPDF_SEEK_CUR :: CUR;
-    HPDF_SEEK_END :: END;
 }
 
 Stream :: *Stream_Rec;
@@ -1397,12 +1142,6 @@ EncodingType :: enum u32 {
     WIN_ANSI_ENCODING  :: 2;
     FONT_SPECIFIC      :: 3;
     ENCODING_EOF       :: 4;
-
-    HPDF_STANDARD_ENCODING  :: STANDARD_ENCODING;
-    HPDF_MAC_ROMAN_ENCODING :: MAC_ROMAN_ENCODING;
-    HPDF_WIN_ANSI_ENCODING  :: WIN_ANSI_ENCODING;
-    HPDF_FONT_SPECIFIC      :: FONT_SPECIFIC;
-    HPDF_ENCODING_EOF       :: ENCODING_EOF;
 }
 
 ParseText_Rec :: struct {
@@ -1453,12 +1192,6 @@ BaseEncodings :: enum u32 {
     MAC_ROMAN     :: 2;
     FONT_SPECIFIC :: 3;
     EOF           :: 4;
-
-    HPDF_BASE_ENCODING_STANDARD      :: STANDARD;
-    HPDF_BASE_ENCODING_WIN_ANSI      :: WIN_ANSI;
-    HPDF_BASE_ENCODING_MAC_ROMAN     :: MAC_ROMAN;
-    HPDF_BASE_ENCODING_FONT_SPECIFIC :: FONT_SPECIFIC;
-    HPDF_BASE_ENCODING_EOF           :: EOF;
 }
 
 Encoder_Validate :: (encoder: Encoder) -> STATUS #foreign libhpdf "HPDF_Encoder_Validate";
@@ -1942,12 +1675,6 @@ FontDefType :: enum u32 {
     CID           :: 2;
     UNINITIALIZED :: 3;
     EOF           :: 4;
-
-    HPDF_FONTDEF_TYPE_TYPE1         :: TYPE1;
-    HPDF_FONTDEF_TYPE_TRUETYPE      :: TRUETYPE;
-    HPDF_FONTDEF_TYPE_CID           :: CID;
-    HPDF_FONTDEF_TYPE_UNINITIALIZED :: UNINITIALIZED;
-    HPDF_FONTDEF_TYPE_EOF           :: EOF;
 }
 
 CID_Width :: struct {
@@ -2205,15 +1932,6 @@ FontType :: enum u32 {
     CID_TYPE0 :: 5;
     CID_TYPE2 :: 6;
     MMTYPE1   :: 7;
-
-    HPDF_FONT_TYPE1     :: TYPE1;
-    HPDF_FONT_TRUETYPE  :: TRUETYPE;
-    HPDF_FONT_TYPE3     :: TYPE3;
-    HPDF_FONT_TYPE0_CID :: TYPE0_CID;
-    HPDF_FONT_TYPE0_TT  :: TYPE0_TT;
-    HPDF_FONT_CID_TYPE0 :: CID_TYPE0;
-    HPDF_FONT_CID_TYPE2 :: CID_TYPE2;
-    HPDF_FONT_MMTYPE1   :: MMTYPE1;
 }
 
 Font :: Dict;

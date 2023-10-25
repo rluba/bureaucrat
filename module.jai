@@ -1068,3 +1068,6 @@ pdf_error_handler :: (error: Pdf.STATUS, detail: Pdf.STATUS, user_data: *void) -
 #import "Math";
 #import "String";
 Debug :: #import "Debug";
+
+// Needed to load PNGs with bureaucrat/libharu
+libpng :: #system_library "libpng";

@@ -1,7 +1,7 @@
 AT_COMPILE_TIME :: true;
 
-COMPILE       :: true; // Enable to compile the libharu library from source before generating bindings.
-COMPILE_DEBUG :: true; // Compile a debug or release version of libharu? @ToDo: DOESN’T WORK – at least on macOS. I don’t know why and I’m currently too tired to investigate.
+COMPILE       :: false; // Enable to compile the libharu library from source before generating bindings.
+COMPILE_DEBUG :: false; // Compile a debug or release version of libharu? @ToDo: DOESN’T WORK – at least on macOS. I don’t know why and I’m currently too tired to investigate.
 
 LIBHARU_PATH :: "libharu_source";
 
@@ -54,8 +54,21 @@ generate_bindings :: () -> bool {
         array_add(*include_paths, libharu_include_path);
         array_add(*source_files,  tprint("%/hpdf.h", libharu_include_path));
         array_add(*strip_prefixes, "HPDF");
-        log_stripped_declarations = true;
+
+        log_stripped_declarations           = true;
         generate_compile_time_struct_checks = false;
+        alias_original_enum_names           = false;
+        array_add(*generate_enums_from_macros_with_prefixes,
+            "HPDF_ENABLE",
+            "HPDF_COMP",
+            "HPDF_GMODE",
+            "HPDF_STREAM_FILTER",
+            "HPDF_OTYPE",
+            "HPDF_OCLASS",
+            "HPDF_OSUBCLASS",
+            // "HPDF_FONT", // Unfortunately pulls in some error codes
+        );
+
 
         visitor   = libharu_visitor;
     }
@@ -175,6 +188,19 @@ libharu_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaratio
 				it.output_name = decl.output_name;
 				break;
 			}
+        }
+
+        if decl.kind == .ENUM {
+            _enum := cast(*Enum) decl;
+            if decl.output_name == {
+                case "COMP"; #through;
+                case "ENABLE"; #through;
+                case "GMODE"; #through;
+                case "STREAM_FILTER"; #through;
+                case "OTYPE";
+                    _enum.flags |= .IS_ENUM_FLAGS;
+                    _enum.flags |= .VALUES_IN_HEX;
+            }
         }
 
     }
