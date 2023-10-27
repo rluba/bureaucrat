@@ -14,7 +14,6 @@ Document :: struct {
     page_orientation:   Pdf.PageDirection;
     page_margins:       [4] float;
     page_background:    Vector3;
-    text_color:         Vector3;
 
     alignment:          Pdf.TextAlignment;
     font_settings:      Font_Settings;
@@ -134,7 +133,7 @@ init :: (document: *Document, page_size: Pdf.PageSizes, page_orientation: Pdf.Pa
     document.page_orientation = page_orientation;
     document.page_margins = page_margins;
     document.page_background = page_background;
-    document.text_color = text_color;
+    document.font_settings.color = text_color;
 
     document.limits.x = 0;
     page := add_page(document);
@@ -179,7 +178,7 @@ add_page :: (using document: *Document) -> Pdf.Page {
     Pdf.Page_Rectangle(page, 0, 0, Pdf.Page_GetWidth(page), height);
     Pdf.Page_Fill(page);
 
-    Pdf.Page_SetRGBFill(page, text_color.x, text_color.y, text_color.z);
+    Pdf.Page_SetRGBFill(page, font_settings.color.x, font_settings.color.y, font_settings.color.z);
 
     // For debugging:
     // {
