@@ -585,9 +585,13 @@ add_image :: (using document: *Document, image: Pdf.Image, width: float, height:
 }
 
 add_horiziontal_line :: (using document: *Document, color: Vector3) {
-    page:= get_current_page(document);
+    page := get_current_page(document);
 
     hr_width := 1.0;
+    if !can_fit_height_on_current_page(document, padding.y + hr_width) {
+        page = add_page(document);
+    }
+
     start_x := page_margins[3] + padding.x;
     start_y := position.y - padding.y;
     render_row_border(page, .{hr_width, color}, start_x, start_y, start_x + get_net_page_width(document, page) - 2 * padding.x, start_y);
