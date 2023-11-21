@@ -1,7 +1,7 @@
 AT_COMPILE_TIME :: true;
 
 COMPILE       :: false; // Enable to compile the libharu library from source before generating bindings.
-COMPILE_DEBUG :: false; // Compile a debug or release version of libharu? @ToDo: DOESN’T WORK – at least on macOS. I don’t know why and I’m currently too tired to investigate.
+COMPILE_DEBUG :: false; // Compile a debug or release version of libharu? @ToDo: THIS DOESN’T WORK FOR THE DYNAMIC LIBRARY – at least on macOS. So you need to delete the dynamic library and only link against the static one if you want to see debug information.
 
 LIBHARU_PATH :: "libharu_source";
 
@@ -92,11 +92,19 @@ build_libharu :: () -> bool {
 		return false;
     }
 
+    success = build_libharu("dynamic library", .[], install_dir);
+    if !success return false;
+    success = build_libharu("static library", .["-DBUILD_SHARED_LIBS=OFF"], install_dir);
+    if !success return false;
+    return true;
+}
+
+build_libharu :: (variant_name: string, config_args: [] string, install_dir: string) -> bool {
 	absolute_install_dir := get_absolute_path(install_dir);
 	assert(absolute_install_dir != "");
 
     absolute_build_dir := join(absolute_install_dir, "_build");
-    log("Configuring libharu... \"%\" -> \"%\"", absolute_build_dir, absolute_install_dir);
+    log("Configuring libharu %... \"%\" -> \"%\"", variant_name, absolute_build_dir, absolute_install_dir);
 	if file_exists(absolute_build_dir) {
 		success := delete_directory(absolute_build_dir);
 		if !success {
@@ -104,7 +112,7 @@ build_libharu :: () -> bool {
 			return false;
 		}
 	}
-    success = make_directory_if_it_does_not_exist(absolute_build_dir);
+    success := make_directory_if_it_does_not_exist(absolute_build_dir);
     if !success {
         log_error("Could not create directory \"%\"\n", absolute_build_dir);
 		return false;
@@ -115,10 +123,10 @@ build_libharu :: () -> bool {
     array_add(*config_command,
 		"cmake",
 		absolute_libharu_path,
-		// "-DBUILD_SHARED_LIBS=OFF",
         tprint("-DCMAKE_INSTALL_PREFIX=%", absolute_install_dir),
         tprint("-DCMAKE_PREFIX_PATH=%",    install_dir),
 	);
+    array_add(*config_command, ..config_args);
 
     if COMPILE_DEBUG {
         array_add(*config_command, "-DCMAKE_BUILD_TYPE=Debug", "-DLIBHPDF_DEBUG=ON");
@@ -129,13 +137,13 @@ build_libharu :: () -> bool {
         array_add(*config_command, tprint("-DCMAKE_OSX_DEPLOYMENT_TARGET=%.%", minimum_macos_version.major, minimum_macos_version.minor));
     }
     run_or_exit(..config_command, working_directory = absolute_build_dir);
-    log("Done configuring libharu");
+    log("Done configuring libharu %", variant_name);
 
-    log("Building libharu…");
+    log("Building libharu %…", variant_name);
     build_command: [..] string;
     array_add(*build_command, "cmake", "--build", absolute_build_dir, "--target", "install");
     run_or_exit(..build_command);
-	log("Done building libharu");
+	log("Done building libharu %", variant_name);
 
 	return true;
 }
