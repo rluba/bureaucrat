@@ -540,6 +540,25 @@ Resize_Mode :: enum {
     CONTAIN;
 }
 
+compute_containing_dimensions :: (size: Vector2, max_size: Vector2) -> Vector2 {
+    w_ratio := size.x / max_size.x;
+    h_ratio := size.y / max_size.y;
+    ratio := 1.0;
+    if w_ratio >= h_ratio {
+        ratio = w_ratio;
+    } else {
+        ratio = h_ratio;
+    }
+
+    result := size;
+    if ratio > 1 {
+        result.x = size.x / ratio;
+        result.y = size.y / ratio;
+    }
+
+    return result;
+}
+
 add_image :: (using document: *Document, image: Pdf.Image, width: float, height: float, resize_mode: Resize_Mode) -> rendered_dimensions: Vector2 {
     page := get_current_page(document);
     rendered_dimensions := Vector2.{width, height};
@@ -547,18 +566,7 @@ add_image :: (using document: *Document, image: Pdf.Image, width: float, height:
         image_dimensions: Vector2;
         assert(size_of(type_of(image_dimensions)) == size_of(Pdf.Point));
         Pdf.Image_GetSize2(image, xx *image_dimensions);
-        w_ratio := image_dimensions.x / width;
-        h_ratio := image_dimensions.y / height;
-        ratio := 1.0;
-        if w_ratio >= h_ratio {
-            ratio = w_ratio;
-        } else {
-            ratio = h_ratio;
-        }
-        if ratio > 1 {
-            rendered_dimensions.x = image_dimensions.x / ratio;
-            rendered_dimensions.y = image_dimensions.y / ratio;
-        }
+        rendered_dimensions = compute_containing_dimensions(image_dimensions, .{width, height});
     }
 
     end_x := page_margins[3] + limits.x + limits.width;
