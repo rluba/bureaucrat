@@ -841,6 +841,9 @@ HPDF_LoadRawImageFromMem  (HPDF_Doc           pdf,
                            HPDF_UINT          bits_per_component);
 
 HPDF_EXPORT(HPDF_STATUS)
+HPDF_Image_CreateAndAddSMask(HPDF_Image image, HPDF_Xref xref, HPDF_BYTE *data, HPDF_UINT width, HPDF_UINT height);
+
+HPDF_EXPORT(HPDF_STATUS)
 HPDF_Image_AddSMask  (HPDF_Image    image,
                       HPDF_Image    smask);
 

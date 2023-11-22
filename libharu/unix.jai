@@ -2496,6 +2496,8 @@ LoadRawImageFromFile :: (pdf: Doc, filename: *u8, width: UINT, height: UINT, col
 
 LoadRawImageFromMem :: (pdf: Doc, buf: *BYTE, width: UINT, height: UINT, color_space: ColorSpace, bits_per_component: UINT) -> Image #foreign libhpdf "HPDF_LoadRawImageFromMem";
 
+Image_CreateAndAddSMask :: (image: Image, xref: Xref, data: *BYTE, width: UINT, height: UINT) -> STATUS #foreign libhpdf "HPDF_Image_CreateAndAddSMask";
+
 Image_AddSMask :: (image: Image, smask: Image) -> STATUS #foreign libhpdf "HPDF_Image_AddSMask";
 
 Image_GetSize :: (image: Image) -> Point #foreign libhpdf "HPDF_Image_GetSize";
