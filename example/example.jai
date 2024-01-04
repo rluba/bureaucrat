@@ -114,6 +114,15 @@ main :: () {
     add_table_row(*pdf, "i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i i", "20 %", "€ 66,67"); // Just to see that cell wrapping properly respects the cell padding.
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
     add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
+
+    details_font_size := 10.0;
+    details_text_color := Vector3.{0.59, 0.61, 0.64};
+    set_font(*pdf, text_font, details_font_size);
+    set_text_color(*pdf, details_text_color);
+    add_table_row(*pdf, trim(LONG_TEXT, " \n"), "", "");
+    set_font(*pdf, text_font, text_font_size);
+    set_text_color(*pdf, .{0, 0, 0});
+
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
     add_table_row(*pdf, "All inclusive:\n16.04.2022 - 15.05.2022", "20 %", "€ 66,67");
     add_table_row(*pdf, "Pure Laser:\n01.04.2022 - 30.04.2022", "20 %", "€ 40,83");
@@ -197,3 +206,14 @@ main :: () {
 
 libpng :: #system_library "libpng";
 
+LONG_TEXT :: #string END
+Details string:
+With details!
+ • That contain bullets
+ • More bullets
+     • MORE BULLETS
+
+And some…
+1. LISTS!
+    1. MOAR
+END

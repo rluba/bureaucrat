@@ -370,7 +370,11 @@ get_position :: (using document: *Document) -> Vector2 {
 }
 
 get_line_height :: (using document: *Document) -> float {
-    return font_settings.font_size * line_height_factor;
+    return get_line_height(document, font_settings);
+}
+
+get_line_height :: (using document: *Document, settings: Font_Settings) -> float {
+    return settings.font_size * line_height_factor;
 }
 
 begin_text_line :: (using document: *Document) {
@@ -407,7 +411,7 @@ render_text :: (using document: *Document, text: string, settings: Font_Settings
     haru_min_x := page_margins[3] + min_x;
     // For debugging line widths
     // render_row_border(page, .{1, .{0,1,0}}, haru_min_x, position.y, haru_min_x + max_width, position.y);
-    line_height := get_line_height(document);
+    line_height := get_line_height(document, settings);
 
     Pdf.Page_SetRGBFill(page, settings.color.x, settings.color.y, settings.color.z);
     Pdf.Page_BeginText(page);
@@ -726,7 +730,7 @@ add_table_row :: (using document: *Document, texts: .. string) {
 }
 
 add_table_cell :: (using document: *Document, text: string) {
-    add_table_cell(document, .{text = text});
+    add_table_cell(document, Table.Cell_Content.{text = text});
 }
 
 add_table_cell :: (using document: *Document, data: Table.Cell_Content) {
@@ -969,7 +973,7 @@ render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_
         ascender_int_offset := Pdf.Font_GetAscent(col.font_settings.font);
         ascender_offset := (ascender_int_offset * col.font_settings.font_size) / 1000.0;
 
-        line_height := col.font_settings.font_size * line_height_factor;
+        line_height := get_line_height(document, col.font_settings);
         font_padding := line_height + descender_offset - ascender_offset;
 
         cell_start_x := min_x;
