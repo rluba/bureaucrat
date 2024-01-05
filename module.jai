@@ -398,7 +398,7 @@ can_fit_height_on_current_page :: (using document: *Document, height: float) -> 
 
 add_text :: (using document: *Document, text: string) -> bool {
     // @Incomplete: Respect document.padding!
-    assert(!table, "Adding text while rendering is not yet supported. Use add_table_cell() instead.");
+    assert(!table, "Adding text while rendering tables is not yet supported. Use add_table_cell() instead.");
     return render_text(document, text, font_settings, alignment, min_x = limits.x, max_width = limits.width);
 }
 
@@ -433,6 +433,8 @@ render_text :: (using document: *Document, text: string, settings: Font_Settings
             begin_text_line(document);
             position.x = haru_min_x;
             Pdf.Page_BeginText(page);
+            Pdf.Page_SetFontAndSize(page, settings.font, settings.font_size);
+            Pdf.Page_SetTextLeading(page, settings.font_size * line_height_factor);
             Pdf.Page_MoveTextPos(page, position.x, position.y);
         }
 
@@ -1063,7 +1065,7 @@ merge_borders :: (upper: *[] Table.Cell_State, lower: *[] Table.Cell_State) {
 
 
 Pdf_Context :: struct {
-    error: Pdf.STATUS;
+    error: Pdf.STATUS = Pdf.HPDF_OK;
     error_detail: Pdf.STATUS;
     // error_location: Source_Code_Location;
 
@@ -1072,7 +1074,11 @@ Pdf_Context :: struct {
 
 pdf_error_handler :: (error: Pdf.STATUS, detail: Pdf.STATUS, user_data: *void) -> void #c_call {
     data := cast(*Pdf_Context) user_data;
-    if !data.error {
+    if data.error != Pdf.HPDF_OK {
+        ctx: Context;
+        push_context ctx {
+            Debug.breakpoint();
+        }
         data.error = error;
         data.error_detail = detail;
         // data.error_location = data.last_location;
