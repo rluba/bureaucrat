@@ -20,7 +20,7 @@ Document :: struct {
     word_wrap           := true;
     line_height_factor: float = 1.3;
 
-    padding:            Vector2;
+    padding:            [4] float;
 
     position:           Vector2;
     limits:             Render_Limits;
@@ -55,7 +55,7 @@ Page_Info :: struct {
 }
 
 Table :: struct {
-    padding:        Vector2;
+    padding:        [4] float;
 
     columns:        [..] Column;
 
@@ -84,7 +84,7 @@ Table :: struct {
         alignment: Pdf.TextAlignment;
 
         borders: [4] Border;
-        padding: Vector2;
+        padding: [4] float;
     }
 
     Cell_State :: struct {
@@ -602,16 +602,16 @@ add_horiziontal_line :: (using document: *Document, color: Vector3) {
     page := get_current_page(document);
 
     hr_width := 1.0;
-    if !can_fit_height_on_current_page(document, padding.y + hr_width) {
+    if !can_fit_height_on_current_page(document, padding[0] + hr_width) {
         page = add_page(document);
     }
 
-    start_x := page_margins[3] + padding.x;
-    start_y := position.y - padding.y;
-    render_row_border(page, .{hr_width, color}, start_x, start_y, start_x + get_net_page_width(document, page) - 2 * padding.x, start_y);
+    start_x := page_margins[3] + padding[3];
+    start_y := position.y - padding[0];
+    render_row_border(page, .{hr_width, color}, start_x, start_y, start_x + get_net_page_width(document, page) - padding[1] - padding[3], start_y);
 
     position.x = page_margins[3];
-    position.y -= hr_width + 2 * padding.y;
+    position.y -= hr_width + padding[0] + padding[2];
 }
 
 set_alignment :: (document: *Document, text_alignment: Pdf.TextAlignment) {
@@ -619,8 +619,62 @@ set_alignment :: (document: *Document, text_alignment: Pdf.TextAlignment) {
 }
 
 set_padding :: (document: *Document, padding: Vector2) {
+    document.padding = .[padding.y, padding.x, padding.y, padding.x];
+}
+
+set_padding :: (document: *Document, padding: [4] float) {
     document.padding = padding;
 }
+
+// Utilites for adjusting padding arrays:
+set_top :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[0] = value;
+    return result;
+}
+
+set_right :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[1] = value;
+    return result;
+}
+
+set_bottom :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[2] = value;
+    return result;
+}
+
+set_left :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[3] = value;
+    return result;
+}
+
+add_top :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[0] += value;
+    return result;
+}
+
+add_right :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[1] += value;
+    return result;
+}
+
+add_bottom :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[2] += value;
+    return result;
+}
+
+add_left :: (values: [4] float, value: float) -> [4] float {
+    result := values;
+    result[3] += value;
+    return result;
+}
+
 
 begin_footer :: (using document: *Document, page_index: int) {
     assert(page_index >= 0 && page_index < pages.count);
@@ -685,6 +739,16 @@ set_default_cell_alignments :: (using document: *Document, alignments: .. Pdf.Te
 }
 
 set_default_cell_paddings :: (using document: *Document, paddings: .. Vector2) {
+    assert(table != null);
+    assert(paddings.count == table.columns.count);
+    for paddings {
+        table.columns[it_index].padding = .[it.y, it.x, it.y, it.x];
+    }
+
+    document.padding = table.columns[table.current_row.count].padding;
+}
+
+set_default_cell_paddings :: (using document: *Document, paddings: .. [4] float) {
     assert(table != null);
     assert(paddings.count == table.columns.count);
     for paddings {
@@ -942,10 +1006,10 @@ compute_height :: (using document: *Document, row: [] Table.Cell_State) {
             col.width += net_width * table.columns[it_index + i].width;
         }
 
-        content_width := col.width - 2 * col.style.padding.x;
+        content_width := col.width - col.style.padding[1] - col.style.padding[3];
 
         text_size := compute_text_size(document, col.content.text, col.font_settings.font, col.font_settings.font_size, content_width);
-        col_height := text_size.y + 2 * col.style.padding.y;
+        col_height := text_size.y + col.style.padding[0] + col.style.padding[2];
         max_height = Max(max_height, col_height);
     }
 
@@ -968,7 +1032,7 @@ render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_
     for * col: row {
         if col.skipped continue;
 
-        content_width := col.width - 2 * col.style.padding.x;
+        content_width := col.width - col.style.padding[1] - col.style.padding[3];
 
         descender_int_offset := Pdf.Font_GetDescent(col.font_settings.font);
         descender_offset := (descender_int_offset * col.font_settings.font_size) / 1000.0;
@@ -979,8 +1043,8 @@ render_row :: (using document: *Document, row: [] Table.Cell_State, only_bottom_
         font_padding := line_height + descender_offset - ascender_offset;
 
         cell_start_x := min_x;
-        content_start_x := cell_start_x + col.style.padding.x;
-        text_baseline_start_y := row_start.y - col.style.padding.y - (ascender_offset + font_padding / 2);
+        content_start_x := cell_start_x + col.style.padding[3];
+        text_baseline_start_y := row_start.y - col.style.padding[0] - (ascender_offset + font_padding / 2);
 
         haru_cell_start_x := page_margins[3] + cell_start_x;
         haru_content_start_x := page_margins[3] + content_start_x;
