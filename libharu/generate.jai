@@ -134,7 +134,7 @@ build_libharu :: (variant_name: string, config_args: [] string, install_dir: str
 
     #if OS == .MACOS {
         using options := get_build_options();
-        array_add(*config_command, tprint("-DCMAKE_OSX_DEPLOYMENT_TARGET=%.%", minimum_macos_version.major, minimum_macos_version.minor));
+        array_add(*config_command, tprint("-DCMAKE_OSX_DEPLOYMENT_TARGET=%.%", minimum_os_version.major, minimum_os_version.minor));
     }
     run_or_exit(..config_command, working_directory = absolute_build_dir);
     log("Done configuring libharu %", variant_name);
