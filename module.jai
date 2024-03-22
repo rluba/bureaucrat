@@ -452,7 +452,7 @@ render_text :: (using document: *Document, text: string, settings: Font_Settings
             remaining_width := max_width - (position.x - haru_min_x);
             line_characters := Pdf.Page_MeasureText(page, c_text + offset, remaining_width, xx word_wrap, *line_width);
             if line_characters == 0 {
-                if position.x == page_margins[3] {
+                if position.x == haru_min_x {
                     // We’re alredy at the start of the row, so breaking into the next line won't help
                     if word_wrap {
                         line_characters = Pdf.Page_MeasureText(page, c_text + offset, remaining_width, 0, *line_width);
