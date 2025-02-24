@@ -848,7 +848,7 @@ end_table :: (using document: *Document) {
 
 append_to_builder :: (builder: *String_Builder, document: *Document) {
     Callback_Data :: struct {
-        ctx: Context;
+        ctx: #Context;
         builder: *String_Builder;
         document: *Document;
     }
@@ -1139,7 +1139,7 @@ Pdf_Context :: struct {
 pdf_error_handler :: (error: Pdf.STATUS, detail: Pdf.STATUS, user_data: *void) -> void #c_call {
     data := cast(*Pdf_Context) user_data;
     if data.error != Pdf.HPDF_OK {
-        ctx: Context;
+        ctx: #Context;
         push_context ctx {
             Debug.breakpoint();
         }
