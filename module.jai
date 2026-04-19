@@ -161,12 +161,12 @@ add_page :: (using document: *Document) -> Pdf.Page {
 
     page_info: Page_Info;
     if current_page_info {
-        page_info = <<current_page_info;
+        page_info = current_page_info.*;
     }
 
     array_add(*pages, page);
     current_page_info = array_add(*page_infos);
-    <<current_page_info = page_info;
+    current_page_info.* = page_info;
     current_page = page;
     current_area = .BODY;
 
@@ -1119,10 +1119,10 @@ render_line :: (page: Pdf.Page, color: Vector3, size: float, start_x: float, sta
 merge_borders :: (upper: *[] Table.Cell_State, lower: *[] Table.Cell_State) {
     assert(upper.count == lower.count);
     for i: 0..upper.count-1 {
-        if (<<upper)[i].style.borders[2].size > (<<lower)[i].style.borders[0].size {
-            (<<lower)[i].merged_borders[0].size = 0;
+        if upper.*[i].style.borders[2].size > lower.*[i].style.borders[0].size {
+            lower.*[i].merged_borders[0].size = 0;
         } else {
-            (<<upper)[i].merged_borders[2].size = 0;
+            upper.*[i].merged_borders[2].size = 0;
         }
     }
 }
