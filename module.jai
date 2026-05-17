@@ -862,7 +862,7 @@ append_to_builder :: (builder: *String_Builder, document: *Document) {
                 buffer := ensure_contiguous_space_and_return_available_range(data.builder, 128);
                 if !buffer {
                     log_error("Couldn’t get a buffer that’s big enough for %", size);
-                    error: u64 = Pdf.HPDF_FAILD_TO_ALLOC_MEM;
+                    error: u64 = Pdf.FAILD_TO_ALLOC_MEM;
                     Pdf.SetError(*data.document.haru_doc.error, error, 0);
                     return error;
                 }
@@ -873,7 +873,7 @@ append_to_builder :: (builder: *String_Builder, document: *Document) {
                 to_write += amount;
                 remaining -= amount;
             }
-            return Pdf.HPDF_OK;
+            return Pdf.OK;
         }
     }
 
@@ -890,7 +890,7 @@ append_to_builder :: (builder: *String_Builder, document: *Document) {
     defer document.haru_doc.stream = old_stream;
 
     result := Pdf.SaveToStream(document.haru_doc);
-    if result != Pdf.HPDF_OK {
+    if result != Pdf.OK {
         document.pdf_context.error = result;
     }
 }
@@ -904,7 +904,7 @@ exit_if_error :: (pdf: Pdf.Doc, loc := #caller_location) {
 }
 
 check_for_error :: (using pdf_context: Pdf_Context) -> success: bool {
-    if error != Pdf.HPDF_OK {
+    if error != Pdf.OK {
         // log_error("Error at % while generating the PDF: 0x% (%)", error_location, formatInt(error, base = 16), error_detail);
         log_error("Error while generating the PDF: 0x% (%)", formatInt(error, base = 16), error_detail);
         return false;
@@ -915,7 +915,7 @@ check_for_error :: (using pdf_context: Pdf_Context) -> success: bool {
 
 check_for_error :: (pdf: Pdf.Doc, loc := #caller_location) -> bool {
     error := Pdf.GetError(pdf);
-    if error != Pdf.HPDF_OK {
+    if error != Pdf.OK {
         log_error("Error at % while generating the PDF: 0x% (%)", loc, formatInt(error, base = 16), Pdf.GetErrorDetail(pdf));
         return false;
     }
@@ -1129,7 +1129,7 @@ merge_borders :: (upper: *[] Table.Cell_State, lower: *[] Table.Cell_State) {
 
 
 Pdf_Context :: struct {
-    error: Pdf.STATUS = Pdf.HPDF_OK;
+    error: Pdf.STATUS = Pdf.OK;
     error_detail: Pdf.STATUS;
     // error_location: Source_Code_Location;
 
@@ -1138,7 +1138,7 @@ Pdf_Context :: struct {
 
 pdf_error_handler :: (error: Pdf.STATUS, detail: Pdf.STATUS, user_data: *void) -> void #c_call {
     data := cast(*Pdf_Context) user_data;
-    if data.error != Pdf.HPDF_OK {
+    if data.error != Pdf.OK {
         ctx: #Context;
         push_context ctx {
             Debug.breakpoint();
